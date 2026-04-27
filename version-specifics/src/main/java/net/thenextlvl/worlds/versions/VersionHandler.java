@@ -69,8 +69,8 @@ public abstract class VersionHandler {
     }
 
     protected void persistWorld(final World world, final Environment environment, final boolean enabled) {
-        final var worldKey = new NamespacedKey("worlds", "world_key");
-        final var dimensionKey = new NamespacedKey("worlds", "dimension");
+        final var worldKey = new NamespacedKey("worlds", "world_key"); // todo: remove?
+        final var dimensionKey = new NamespacedKey("worlds", "dimension"); // todo: remove?
         world.getPersistentDataContainer().set(worldKey, STRING, world.key().asString());
         world.getPersistentDataContainer().set(dimensionKey, STRING, environment.key().asString());
         WorldsAccess.access().setEnabled(world, enabled);
