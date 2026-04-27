@@ -9,14 +9,10 @@ plugins {
 }
 
 dependencies {
-    compileOnly("io.papermc.paper:paper-api:1.21.4-R0.1-SNAPSHOT")
+    compileOnly("io.papermc.paper:paper-api:26.1.2.build.+")
     implementation(project(":api"))
 
     implementation(project(":version-specifics"))
-    implementation(project(":version-specifics:v1.21.4"))
-    implementation(project(":version-specifics:v1.21.8"))
-    implementation(project(":version-specifics:v1.21.10"))
-    implementation(project(":version-specifics:v1.21.11"))
     implementation(project(":version-specifics:v26.1.1"))
 
     implementation("net.thenextlvl.version-checker:modrinth-paper:1.0.1")
@@ -36,7 +32,7 @@ tasks.shadowJar {
 paper {
     name = "Worlds"
     main = "net.thenextlvl.worlds.WorldsPlugin"
-    apiVersion = "1.21.4"
+    apiVersion = "26.1"
     description = "Create, delete and manage your worlds"
     load = BukkitPluginDescription.PluginLoadOrder.STARTUP
     website = "https://thenextlvl.net"

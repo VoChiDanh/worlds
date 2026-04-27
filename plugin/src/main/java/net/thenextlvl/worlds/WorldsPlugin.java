@@ -90,15 +90,7 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess {
 
     private VersionHandler selectImplementation() {
         final var s = ServerBuildInfo.buildInfo().minecraftVersionId();
-        if (s.contains("1.21.4")) {
-            return new net.thenextlvl.worlds.versions.v1_21_4.SimpleVersionHandler(this);
-        } else if (s.contains("1.21.5") || s.contains("1.21.6") || s.contains("1.21.7") || s.contains("1.21.8")) {
-            return new net.thenextlvl.worlds.versions.v1_21_8.SimpleVersionHandler(this);
-        } else if (s.contains("1.21.9") || s.contains("1.21.10")) {
-            return new net.thenextlvl.worlds.versions.v1_21_10.SimpleVersionHandler(this);
-        } else if (s.contains("1.21.11")) {
-            return new net.thenextlvl.worlds.versions.v1_21_11.SimpleVersionHandler(this);
-        } else if (s.equals("26.1") || s.contains("26.1.1")) {
+        if (s.equals("26.1") || s.contains("26.1.1") || s.contains("26.1.2")) {
             return new net.thenextlvl.worlds.versions.v26_1_1.SimpleVersionHandler(this);
         }
         throw new IllegalStateException("No implementation found for version: " + s + ", check for an update.");
