@@ -179,7 +179,7 @@ final class SimplePreset implements Preset {
         public Preset build() {
             return new SimplePreset(
                     name, biome, lakes, features, decoration,
-                    Set.copyOf(layers), Set.copyOf(structures)
+                    new LinkedHashSet<>(layers), new LinkedHashSet<>(structures)
             );
         }
     }
