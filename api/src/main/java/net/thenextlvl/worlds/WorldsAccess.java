@@ -5,6 +5,7 @@ import org.bukkit.PortalType;
 import org.bukkit.World;
 import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.ApiStatus;
+import org.jetbrains.annotations.CheckReturnValue;
 import org.jetbrains.annotations.Contract;
 
 import java.nio.file.Path;
@@ -15,8 +16,7 @@ import java.util.stream.Stream;
 
 @ApiStatus.NonExtendable
 public interface WorldsAccess extends Plugin {
-    @Contract(pure = true)
-    static WorldsAccess access() {
+    static @CheckReturnValue WorldsAccess access() {
         final class Cache {
             private static final WorldsAccess INSTANCE = StaticBinder.getInstance(WorldsAccess.class.getClassLoader()).find(WorldsAccess.class);
         }
