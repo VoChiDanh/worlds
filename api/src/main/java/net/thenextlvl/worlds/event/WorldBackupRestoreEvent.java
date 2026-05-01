@@ -1,13 +1,12 @@
 package net.thenextlvl.worlds.event;
 
+import net.thenextlvl.worlds.Backup;
 import org.bukkit.World;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.world.WorldEvent;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Contract;
-
-import java.nio.file.Path;
 
 /**
  * Represents an event triggered when a {@link World} backup is restored.
@@ -21,17 +20,17 @@ public final class WorldBackupRestoreEvent extends WorldEvent implements Cancell
     private static final HandlerList handlerList = new HandlerList();
 
     private boolean cancelled = false;
-    private final Path backupFile;
+    private final Backup backup;
 
     @ApiStatus.Internal
-    public WorldBackupRestoreEvent(final World world, final Path backupFile) {
+    public WorldBackupRestoreEvent(final World world, final Backup backup) {
         super(world, false);
-        this.backupFile = backupFile;
+        this.backup = backup;
     }
 
     @Contract(pure = true)
-    public Path getBackupFile() {
-        return backupFile;
+    public Backup getBackup() {
+        return backup;
     }
 
     @Override
