@@ -61,14 +61,13 @@ public final class WorldListener implements Listener {
                 world.key().asString(), level.getGeneratorType().key().asString(),
                 world.getWorldFolder().getPath()
         )).exceptionally(throwable -> {
-            if (plugin.handler().isDirectoryLockException(throwable)) {
-                plugin.getComponentLogger().error("Failed to start the minecraft server", throwable.getCause());
+            final var t = throwable.getCause() != null ? throwable.getCause() : throwable;
+            if (plugin.handler().isDirectoryLockException(t)) {
+                plugin.getComponentLogger().error("Failed to start the minecraft server", t);
                 plugin.getServer().shutdown();
             } else {
-                plugin.getComponentLogger().error("An unexpected error occurred while loading the level {}",
-                        path.getFileName(), throwable);
-                plugin.getComponentLogger().error("Please report the error above on GitHub: {}",
-                        "https://github.com/TheNextLvl-net/worlds/issues/new/choose");
+                plugin.getComponentLogger().error("An unexpected error occurred while loading the level {}", path.getFileName(), t);
+                plugin.getComponentLogger().error("Please report the error above on GitHub: {}", WorldsPlugin.ISSUES);
             }
             return null;
         });

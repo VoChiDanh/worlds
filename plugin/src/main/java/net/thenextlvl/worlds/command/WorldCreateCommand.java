@@ -84,7 +84,8 @@ final class WorldCreateCommand extends OptionCommand {
             if (!(sender instanceof final Entity entity)) return;
             entity.teleportAsync(world.getSpawnLocation(), COMMAND);
         }).exceptionally(throwable -> {
-            plugin.getComponentLogger().warn("Failed to create world {} ({})", level.key(), level.getName(), throwable);
+            final var t = throwable.getCause() != null ? throwable.getCause() : throwable;
+            plugin.getComponentLogger().warn("Failed to create world {} ({})", level.key(), level.getName(), t);
             plugin.bundle().sendMessage(sender, "world.create.failed", placeholder);
             return null;
         });

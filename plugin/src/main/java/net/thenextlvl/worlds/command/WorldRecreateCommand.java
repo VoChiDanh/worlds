@@ -9,15 +9,15 @@ import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
+import net.thenextlvl.worlds.Dimension;
 import net.thenextlvl.worlds.WorldsPlugin;
-import net.thenextlvl.worlds.v4.generator.SimpleGenerator;
-import net.thenextlvl.worlds.experimental.GeneratorType;
-import net.thenextlvl.worlds.LevelStem;
-import net.thenextlvl.worlds.preset.Preset;
+import net.thenextlvl.worlds.command.argument.DimensionArgumentType;
 import net.thenextlvl.worlds.command.argument.KeyArgument;
-import net.thenextlvl.worlds.command.argument.LevelStemArgument;
 import net.thenextlvl.worlds.command.argument.SeedArgument;
 import net.thenextlvl.worlds.command.brigadier.OptionCommand;
+import net.thenextlvl.worlds.experimental.GeneratorType;
+import net.thenextlvl.worlds.generator.Generator;
+import net.thenextlvl.worlds.preset.Preset;
 import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.jspecify.annotations.NullMarked;
@@ -46,7 +46,7 @@ final class WorldRecreateCommand extends OptionCommand {
         addOptions(name, false, Set.of(
                 new Option("bonus-chest", BoolArgumentType.bool()),
                 new Option("hardcore", BoolArgumentType.bool()),
-                new Option("dimension", new LevelStemArgument(plugin)),
+                new Option("dimension", new DimensionArgumentType(plugin)),
                 new Option("key", new KeyArgument()),
                 new Option("seed", new SeedArgument()),
                 new Option("structures", BoolArgumentType.bool())
@@ -66,11 +66,11 @@ final class WorldRecreateCommand extends OptionCommand {
             return 0;
         }
 
-        final var builder = plugin.levelBuilder(world).directory(plugin.levelView().findFreePath(name));
+        final var builder = plugin.levelBuilder(world);
 
         tryGetArgument(context, "bonus-chest", Boolean.class).ifPresent(builder::bonusChest);
-        tryGetArgument(context, "dimension", LevelStem.class).ifPresent(builder::levelStem);
-        tryGetArgument(context, "generator", SimpleGenerator.class).ifPresent(builder::generator);
+        tryGetArgument(context, "dimension", Dimension.class).ifPresent(builder::dimension);
+        tryGetArgument(context, "generator", Generator.class).ifPresent(builder::generator);
         tryGetArgument(context, "hardcore", Boolean.class).ifPresent(builder::hardcore);
         tryGetArgument(context, "key", Key.class).ifPresentOrElse(builder::key, () ->
                 builder.key(plugin.levelView().findFreeKey(world.key())));
@@ -84,12 +84,13 @@ final class WorldRecreateCommand extends OptionCommand {
         final var placeholder = Placeholder.parsed("world", world.getName());
 
         plugin.bundle().sendMessage(sender, "world.recreate", placeholder);
-        level.createAsync().thenAccept(recreated -> {
+        level.create().thenAccept(recreated -> {
             plugin.bundle().sendMessage(sender, "world.recreate.success", placeholder);
             if (!(sender instanceof final Entity entity)) return;
             entity.teleportAsync(recreated.getSpawnLocation(), COMMAND);
         }).exceptionally(throwable -> {
-            plugin.getComponentLogger().warn("Failed to recreate world {}", world.getName(), throwable);
+            final var t = throwable.getCause() != null ? throwable.getCause() : throwable;
+            plugin.getComponentLogger().warn("Failed to recreate world {}", world.getName(), t);
             plugin.bundle().sendMessage(sender, "world.recreate.failed", placeholder);
             return null;
         });

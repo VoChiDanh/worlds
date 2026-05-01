@@ -102,7 +102,7 @@ public final class SimpleVersionHandler extends VersionHandler {
 
     @Override
     public boolean isDirectoryLockException(final Throwable throwable) {
-        return throwable.getCause() instanceof DirectoryLock.LockException;
+        return throwable instanceof DirectoryLock.LockException;
     }
 
     @Override

@@ -61,8 +61,9 @@ final class WorldLoadCommand extends SimpleCommand {
             if (!(sender instanceof final Entity entity)) return;
             entity.teleportAsync(level.getSpawnLocation(), COMMAND);
         }).exceptionally(throwable -> {
-            plugin.getComponentLogger().warn("Failed to load world {}", path, throwable);
-            plugin.bundle().sendMessage(sender, "world.load.failed", Placeholder.parsed("world", path.toString()));
+            final var t = throwable.getCause() != null ? throwable.getCause() : throwable;
+            plugin.getComponentLogger().warn("Failed to load world {}", path, t);
+            plugin.bundle().sendMessage(sender, "world.load.failed", Placeholder.parsed("world", key.asString()));
             return null;
         });
         return SINGLE_SUCCESS;
