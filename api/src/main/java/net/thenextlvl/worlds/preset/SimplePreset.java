@@ -9,6 +9,7 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.Arrays;
 import java.util.LinkedHashSet;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -110,6 +111,37 @@ final class SimplePreset implements Preset {
                 .decoration(decoration)
                 .layers(layers)
                 .structures(structures);
+    }
+
+    @Override
+    public boolean equals(final Object object) {
+        if (this == object) return true;
+        if (!(object instanceof final Preset preset)) return false;
+        return lakes == preset.lakes()
+                && features == preset.features()
+                && decoration == preset.decoration()
+                && Objects.equals(name(), preset.name())
+                && Objects.equals(biome, preset.biome())
+                && Objects.equals(layers, preset.layers())
+                && Objects.equals(structures, preset.structures());
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(name, biome, lakes, features, decoration, layers, structures);
+    }
+
+    @Override
+    public String toString() {
+        return "SimplePreset{" +
+                "name='" + name + '\'' +
+                ", biome=" + biome +
+                ", lakes=" + lakes +
+                ", features=" + features +
+                ", decoration=" + decoration +
+                ", layers=" + layers +
+                ", structures=" + structures +
+                '}';
     }
 
     public static final class Builder implements Preset.Builder {
