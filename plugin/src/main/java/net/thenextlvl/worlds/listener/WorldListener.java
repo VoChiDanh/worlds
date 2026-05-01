@@ -22,6 +22,13 @@ public final class WorldListener implements Listener {
     @EventHandler(priority = EventPriority.LOWEST)
     public void onWorldLoad(final WorldLoadEvent event) {
         registerEntryPermission(event.getWorld());
+
+        if (plugin.levelView().isNether(event.getWorld())) {
+            plugin.getWorldRegistry().registerIfAbsent(event.getWorld().key(), Dimension.THE_NETHER, true, null);
+        } else if (plugin.levelView().isEnd(event.getWorld())) {
+            plugin.getWorldRegistry().registerIfAbsent(event.getWorld().key(), Dimension.THE_END, true, null);
+        }
+
         if (!plugin.levelView().isOverworld(event.getWorld())) return;
         plugin.getWorldRegistry().entrySet()
                 .filter(entry -> entry.getValue().enabled())
