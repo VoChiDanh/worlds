@@ -38,7 +38,7 @@ public interface WorldsAccess extends Plugin {
     @Contract(pure = true)
     Stream<Path> listLevels();
 
-    CompletableFuture<ActionResult<World>> load(Key key);
+    CompletableFuture<World> load(Key key);
 
     CompletableFuture<World> create(Level level);
 
@@ -49,31 +49,34 @@ public interface WorldsAccess extends Plugin {
     CompletableFuture<Boolean> save(World world, boolean flush);
 
     @Contract(mutates = "param1")
-    CompletableFuture<ActionResult<World>> clone(World world, boolean full);
+    CompletableFuture<World> clone(World world, boolean full);
 
     @Contract(mutates = "param1")
-    CompletableFuture<ActionResult<Void>> delete(World world);
+    CompletableFuture<World> clone(World world, Consumer<Level.Builder> builder, boolean full);
 
     @Contract(mutates = "param1")
-    CompletableFuture<ActionResult<Void>> delete(World world, boolean schedule);
+    CompletableFuture<Boolean> delete(World world);
 
     @Contract(mutates = "param1")
-    CompletableFuture<ActionResult<World>> regenerate(World world);
+    CompletableFuture<Boolean> scheduleDeletion(World world);
 
     @Contract(mutates = "param1")
-    CompletableFuture<ActionResult<World>> regenerate(World world, Consumer<Level.Builder> builder);
+    CompletableFuture<World> regenerate(World world);
 
     @Contract(mutates = "param1")
-    CompletableFuture<ActionResult<World>> regenerate(World world, boolean schedule, Consumer<Level.Builder> builder);
+    CompletableFuture<World> regenerate(World world, Consumer<Level.Builder> builder);
+
+    @Contract(mutates = "param1")
+    CompletableFuture<Boolean> scheduleRegeneration(World world);
 
     @Contract(mutates = "param1")
     CompletableFuture<Backup> createBackup(World world, @Nullable String name);
 
     @Contract(mutates = "param1")
-    CompletableFuture<ActionResult<World>> restoreBackup(World world, Backup backup);
+    CompletableFuture<World> restoreBackup(World world, Backup backup);
 
     @Contract(mutates = "param1")
-    CompletableFuture<ActionResult<World>> restoreBackup(World world, Backup backup, boolean schedule);
+    CompletableFuture<Boolean> scheduleBackupRestoration(World world, Backup backup);
 
     @Contract(pure = true)
     boolean isEnabled(World world);

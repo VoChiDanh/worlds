@@ -7,6 +7,7 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
+import net.thenextlvl.worlds.WorldOperationException;
 import net.thenextlvl.worlds.WorldsPlugin;
 import net.thenextlvl.worlds.command.argument.CommandFlagsArgument;
 import net.thenextlvl.worlds.command.brigadier.SimpleCommand;
@@ -52,18 +53,17 @@ final class WorldRegenerateCommand extends SimpleCommand {
         final var schedule = flags.contains("--schedule");
         if (!schedule) plugin.bundle().sendMessage(context.getSource().getSender(), "world.regenerate",
                 Placeholder.parsed("world", world.key().asString()));
-        plugin.regenerate(world, schedule, builder -> {
+        final var future = schedule ? plugin.scheduleRegeneration(world) : plugin.regenerate(world, builder -> {
             if (flags.contains("--seed")) builder.seed(null).resetSpawnPosition(true);
-        }).thenAccept(result -> {
-            final var message = switch (result.status()) {
-                case SUCCESS -> "world.regenerate.success";
-                case SCHEDULED -> "world.regenerate.scheduled";
-                case REQUIRES_SCHEDULING -> "world.regenerate.disallowed";
-                case UNLOAD_FAILED -> "world.unload.failed";
-                case FAILED -> "world.regenerate.failed";
-            };
-            plugin.bundle().sendMessage(context.getSource().getSender(), message,
-                    Placeholder.parsed("world", world.key().asString()));
+        }).thenApply(ignored -> true);
+        future.thenAccept(success -> {
+            if (success) {
+                final var message = schedule ? "world.regenerate.scheduled" : "world.regenerate.success";
+                plugin.bundle().sendMessage(context.getSource().getSender(), message,
+                        Placeholder.parsed("world", world.key().asString()));
+            } else CommandFailureHandler.handle(plugin, context.getSource().getSender(), new WorldOperationException(
+                    WorldOperationException.Reason.EVENT_CANCELLED
+            ).world(world.key().asString()).key(world.key()), Placeholder.parsed("world", world.key().asString()));
         }).exceptionally(throwable -> {
             CommandFailureHandler.handle(plugin, context.getSource().getSender(), throwable,
                     Placeholder.parsed("world", world.key().asString()));

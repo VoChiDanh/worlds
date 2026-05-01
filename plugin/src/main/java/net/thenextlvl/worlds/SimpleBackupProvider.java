@@ -39,28 +39,26 @@ public class SimpleBackupProvider implements BackupProvider {
     }
 
     @Override
-    public CompletableFuture<ActionResult<World>> restore(final World world, final Backup backup) {
+    public CompletableFuture<World> restore(final World world, final Backup backup) {
         final var worldKey = world.key();
         return WorldsAccess.access().unload(world, true).thenComposeAsync(success -> {
-            if (!success) return CompletableFuture.completedFuture(
-                    ActionResult.result(null, ActionResult.Status.UNLOAD_FAILED)
-            );
-            final var status = restoreNow(worldKey, backup);
-            if (status != ActionResult.Status.SUCCESS) {
-                return CompletableFuture.completedFuture(ActionResult.result(null, status));
+            if (!success) {
+                return CompletableFuture.failedFuture(new WorldOperationException(
+                        WorldOperationException.Reason.UNLOAD_FAILED
+                ).world(worldKey.asString()).key(worldKey));
             }
+            restoreNow(worldKey, backup);
             WorldsAccess.access().getScheduler().cancel(world, WorldActionScheduledEvent.ActionType.RESTORE_BACKUP);
             return WorldsAccess.access().load(worldKey);
         });
     }
 
     @Override
-    public ActionResult.Status restoreNow(final Key key, final Backup backup) {
+    public void restoreNow(final Key key, final Backup backup) {
         if (!(backup instanceof final FileBackup fileBackup))
             throw new IllegalStateException("Tried to restore backup from different provider");
         try {
             restoreBackup(key, fileBackup.path());
-            return ActionResult.Status.SUCCESS;
         } catch (final IOException e) {
             throw new WorldOperationException(
                     WorldOperationException.Reason.BACKUP_RESTORE_FAILED,

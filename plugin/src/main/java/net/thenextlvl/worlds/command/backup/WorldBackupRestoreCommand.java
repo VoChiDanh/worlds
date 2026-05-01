@@ -7,6 +7,7 @@ import com.mojang.brigadier.context.CommandContext;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
+import net.thenextlvl.worlds.WorldOperationException;
 import net.thenextlvl.worlds.WorldsPlugin;
 import net.thenextlvl.worlds.command.CommandFailureHandler;
 import net.thenextlvl.worlds.command.argument.CommandFlagsArgument;
@@ -68,24 +69,26 @@ final class WorldBackupRestoreCommand extends SimpleCommand {
 
         resolved.thenAccept(optional -> {
             final var backup = optional.orElse(null);
-            
+
             if (backup == null) {
                 plugin.bundle().sendMessage(context.getSource().getSender(), "world.backup.list.empty",
                         Placeholder.parsed("world", world.key().asString()));
                 return;
             }
 
-            plugin.restoreBackup(world, backup, schedule).thenAccept(result -> {
-                final var message = switch (result.status()) {
-                    case SUCCESS -> "world.backup.restore.success";
-                    case SCHEDULED -> "world.backup.restore.scheduled";
-                    case REQUIRES_SCHEDULING -> "world.backup.restore.disallowed";
-                    case UNLOAD_FAILED -> "world.unload.failed";
-                    case FAILED -> "world.backup.restore.failed";
-                };
-                plugin.bundle().sendMessage(context.getSource().getSender(), message,
-                        Placeholder.parsed("world", result.result().map(World::key).orElse(world.key()).asString()),
-                        Placeholder.parsed("identifier", backup.name()));
+            final var future = schedule ? plugin.scheduleBackupRestoration(world, backup)
+                    : plugin.restoreBackup(world, backup).thenApply(ignored -> true);
+            future.thenAccept(success -> {
+                if (success) {
+                    final var message = schedule ? "world.backup.restore.scheduled" : "world.backup.restore.success";
+                    plugin.bundle().sendMessage(context.getSource().getSender(), message,
+                            Placeholder.parsed("world", world.key().asString()),
+                            Placeholder.parsed("identifier", backup.name()));
+                } else CommandFailureHandler.handle(plugin, context.getSource().getSender(), new WorldOperationException(
+                        WorldOperationException.Reason.EVENT_CANCELLED
+                ).world(world.key().asString()).key(world.key()).backup(backup.name()), Placeholder.parsed("world", world.key().asString()),
+                        Placeholder.parsed("identifier", backup.name()),
+                        Placeholder.parsed("backup", backup.name()));
             }).exceptionally(throwable -> {
                 CommandFailureHandler.handle(plugin, context.getSource().getSender(), throwable, Placeholder.parsed("world", world.key().asString()),
                         Placeholder.parsed("identifier", backup.name()),

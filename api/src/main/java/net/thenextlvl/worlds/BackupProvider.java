@@ -20,11 +20,11 @@ public interface BackupProvider {
     CompletableFuture<Backup> backup(World world, @Nullable String name);
 
     @Contract(mutates = "param,io")
-    CompletableFuture<ActionResult<World>> restore(World world, Backup backup);
+    CompletableFuture<World> restore(World world, Backup backup);
 
     @ApiStatus.OverrideOnly
     @Contract(mutates = "io")
-    ActionResult.Status restoreNow(Key key, Backup backup);
+    void restoreNow(Key key, Backup backup);
 
     @Contract(pure = true)
     CompletableFuture<Stream<Backup>> listBackups();

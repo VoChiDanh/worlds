@@ -39,21 +39,21 @@ final class SimpleScheduledWorldOperations implements ScheduledWorldOperations {
     }
 
     @Override
-    public ActionResult.Status schedule(final World world, final ActionType type, final Consumer<Path> consumer) {
-        if (isScheduled(world, type)) return ActionResult.Status.SCHEDULED;
+    public boolean schedule(final World world, final ActionType type, final Consumer<Path> consumer) {
+        if (isScheduled(world, type)) return false;
 
         final var event = new WorldActionScheduledEvent(world, type);
-        if (!event.callEvent()) return ActionResult.Status.FAILED;
+        if (!event.callEvent()) return false;
 
         final var action = event.getAction() == null ? consumer : event.getAction().andThen(consumer);
 
         final var path = world.getWorldPath();
         operations.add(new Operation(type, world.key(), () -> action.accept(path)));
-        return ActionResult.Status.SCHEDULED;
+        return true;
     }
 
     @Override
-    public ActionResult.Status scheduleDeletion(final World world) {
+    public boolean scheduleDeletion(final World world) {
         return schedule(world, WorldActionScheduledEvent.ActionType.DELETE, path -> {
             WorldFiles.delete(path);
             WorldsAccess.access().getWorldRegistry().unregister(world.key());
@@ -61,12 +61,12 @@ final class SimpleScheduledWorldOperations implements ScheduledWorldOperations {
     }
 
     @Override
-    public ActionResult.Status scheduleRegeneration(final World world) {
+    public boolean scheduleRegeneration(final World world) {
         return schedule(world, WorldActionScheduledEvent.ActionType.REGENERATE, WorldFiles::regenerate);
     }
 
     @Override
-    public ActionResult.Status scheduleBackupRestoration(final World world, final Backup backup) {
+    public boolean scheduleBackupRestoration(final World world, final Backup backup) {
         return schedule(world, WorldActionScheduledEvent.ActionType.RESTORE_BACKUP, path -> backup.provider().restoreNow(world.key(), backup));
     }
 

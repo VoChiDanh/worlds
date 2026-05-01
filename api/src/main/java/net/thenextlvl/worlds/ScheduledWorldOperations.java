@@ -23,13 +23,13 @@ public sealed interface ScheduledWorldOperations permits SimpleScheduledWorldOpe
     @Contract(pure = true)
     Stream<Operation> operations(WorldActionScheduledEvent.ActionType actionType);
 
-    ActionResult.Status schedule(World world, WorldActionScheduledEvent.ActionType actionType, Consumer<Path> action);
+    boolean schedule(World world, WorldActionScheduledEvent.ActionType actionType, Consumer<Path> action);
 
-    ActionResult.Status scheduleDeletion(final World world);
+    boolean scheduleDeletion(final World world);
 
-    ActionResult.Status scheduleRegeneration(final World world);
+    boolean scheduleRegeneration(final World world);
 
-    ActionResult.Status scheduleBackupRestoration(final World world, final Backup backup);
+    boolean scheduleBackupRestoration(final World world, final Backup backup);
 
     @Contract(pure = true)
     boolean isScheduled(World world, WorldActionScheduledEvent.ActionType actionType);

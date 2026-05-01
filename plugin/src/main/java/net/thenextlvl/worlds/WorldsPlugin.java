@@ -43,6 +43,7 @@ import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
@@ -255,18 +256,17 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
 
     @Override
     public Stream<Path> listLevels() {
-        return levelView.listLevels().stream();
+        return levelView.listLevels();
     }
 
     @Override
-    public CompletableFuture<ActionResult<World>> load(final Key key) {
-        return levelView.read(key)
+    public CompletableFuture<World> load(final Key key) {
+        return worldRegistry.get(key).map(entry -> levelView.read(key, entry))
                 .map(Level.Builder::build)
-                .map(level -> level.create().thenApply(world -> {
-                    worldRegistry.register(level, true);
-                    return ActionResult.result(world, ActionResult.Status.SUCCESS);
-                }))
-                .orElseGet(() -> CompletableFuture.completedFuture(ActionResult.result(null, ActionResult.Status.FAILED)));
+                .map(Level::create)
+                .orElseGet(() -> CompletableFuture.failedFuture(new WorldOperationException(
+                        WorldOperationException.Reason.WORLD_NOT_FOUND
+                ).world(key.asString()).key(key)));
     }
 
     @Override
@@ -276,7 +276,6 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
 
     @Override
     public CompletableFuture<Boolean> unload(final World world, final boolean save) {
-        worldRegistry.setEnabled(world.key(), false);
         return levelView.unloadAsync(world, save);
     }
 
@@ -286,40 +285,40 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
     }
 
     @Override
-    public CompletableFuture<ActionResult<World>> clone(final World world, final boolean full) {
-        return levelView.cloneAsync(world, builder -> {
-                }, full)
-                .thenApply(clone -> ActionResult.result(clone, ActionResult.Status.SUCCESS));
+    public CompletableFuture<World> clone(final World world, final boolean full) {
+        return clone(world, builder -> {
+        }, full);
     }
 
     @Override
-    public CompletableFuture<ActionResult<Void>> delete(final World world) {
-        return delete(world, false);
+    public CompletableFuture<World> clone(final World world, final Consumer<Level.Builder> builder, final boolean full) {
+        return levelView.cloneAsync(world, builder, full);
     }
 
     @Override
-    public CompletableFuture<ActionResult<Void>> delete(final World world, final boolean schedule) {
-        return supplyGlobal(() -> schedule
-                ? CompletableFuture.completedFuture(ActionResult.result(null, getScheduler().scheduleDeletion(world)))
-                : deleteNow(world));
+    public CompletableFuture<Boolean> delete(final World world) {
+        return supplyGlobal(() -> deleteNow(world));
     }
 
     @Override
-    public CompletableFuture<ActionResult<World>> regenerate(final World world) {
+    public CompletableFuture<Boolean> scheduleDeletion(final World world) {
+        return supplyGlobal(() -> CompletableFuture.completedFuture(getScheduler().scheduleDeletion(world)));
+    }
+
+    @Override
+    public CompletableFuture<World> regenerate(final World world) {
         return regenerate(world, builder -> {
         });
     }
 
     @Override
-    public CompletableFuture<ActionResult<World>> regenerate(final World world, final Consumer<Level.Builder> builder) {
-        return regenerate(world, false, builder);
+    public CompletableFuture<World> regenerate(final World world, final Consumer<Level.Builder> builder) {
+        return supplyGlobal(() -> regenerateNow(world, builder));
     }
 
     @Override
-    public CompletableFuture<ActionResult<World>> regenerate(final World world, final boolean schedule, final Consumer<Level.Builder> builder) {
-        return supplyGlobal(() -> schedule
-                ? CompletableFuture.completedFuture(ActionResult.result(null, getScheduler().scheduleRegeneration(world)))
-                : regenerateNow(world, builder));
+    public CompletableFuture<Boolean> scheduleRegeneration(final World world) {
+        return supplyGlobal(() -> CompletableFuture.completedFuture(getScheduler().scheduleRegeneration(world)));
     }
 
     @Override
@@ -331,35 +330,26 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
     }
 
     @Override
-    public CompletableFuture<ActionResult<World>> restoreBackup(final World world, final Backup backup) {
-        return restoreBackup(world, backup, false);
-    }
-
-    @Override
-    public CompletableFuture<ActionResult<World>> restoreBackup(final World world, final Backup backup, final boolean schedule) {
+    public CompletableFuture<World> restoreBackup(final World world, final Backup backup) {
         return supplyGlobal(() -> {
-            if (schedule) return CompletableFuture.completedFuture(
-                    ActionResult.result(null, getScheduler().scheduleBackupRestoration(world, backup))
-            );
-            if (levelView.isOverworld(world)) return CompletableFuture.completedFuture(
-                    ActionResult.result(null, ActionResult.Status.REQUIRES_SCHEDULING)
-            );
+            if (levelView.isOverworld(world)) return CompletableFuture.failedFuture(new WorldOperationException(
+                    WorldOperationException.Reason.BACKUP_RESTORE_REQUIRES_SCHEDULING
+            ).world(world.key().asString()).key(world.key()).backup(backup.name()));
             if (!new WorldBackupRestoreEvent(world, backup).callEvent())
                 return CompletableFuture.failedFuture(new WorldOperationException(
                         WorldOperationException.Reason.EVENT_CANCELLED
                 ).world(world.key().asString()).key(world.key()).backup(backup.name()));
-            final var players = world.getPlayers();
+            final var players = List.copyOf(world.getPlayers());
             return movePlayersToOverworld(world).thenCompose(ignored -> getBackupProvider().restore(world, backup)
-                    .thenApply(result -> {
-                        result.result().ifPresent(restored -> players.forEach(player -> player.teleportAsync(
+                    .thenApply(restored -> {
+                        players.forEach(player -> player.teleportAsync(
                                 restored.getSpawnLocation(), PlayerTeleportEvent.TeleportCause.PLUGIN
-                        )));
-                        return result;
+                        ));
+                        return restored;
                     }).exceptionallyCompose(throwable -> {
                         final var t = throwable.getCause() != null ? throwable.getCause() : throwable;
                         final var level = Level.copy(world).build();
                         return level.create().thenCompose(restored -> {
-                            worldRegistry.register(level, true);
                             players.forEach(player -> player.teleportAsync(
                                     restored.getSpawnLocation(), PlayerTeleportEvent.TeleportCause.PLUGIN
                             ));
@@ -369,30 +359,42 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
         });
     }
 
-    private CompletableFuture<ActionResult<Void>> deleteNow(final World world) {
-        if (levelView.isOverworld(world)) return CompletableFuture.completedFuture(
-                ActionResult.result(null, ActionResult.Status.REQUIRES_SCHEDULING)
-        );
-        if (!new WorldDeleteEvent(world).callEvent()) return CompletableFuture.completedFuture(
-                ActionResult.result(null, ActionResult.Status.FAILED)
-        );
+    @Override
+    public CompletableFuture<Boolean> scheduleBackupRestoration(final World world, final Backup backup) {
+        return supplyGlobal(() -> CompletableFuture.completedFuture(getScheduler().scheduleBackupRestoration(world, backup)));
+    }
 
-        return movePlayersToOverworld(world).thenCompose(ignored -> unload(world, false).thenApply(success -> {
-            if (!success) return ActionResult.<Void>result(null, ActionResult.Status.UNLOAD_FAILED);
+    private CompletableFuture<Boolean> deleteNow(final World world) {
+        if (levelView.isOverworld(world)) return CompletableFuture.failedFuture(new WorldOperationException(
+                WorldOperationException.Reason.DELETE_REQUIRES_SCHEDULING
+        ).world(world.key().asString()).key(world.key()));
+        if (!new WorldDeleteEvent(world).callEvent()) return CompletableFuture.failedFuture(new WorldOperationException(
+                WorldOperationException.Reason.EVENT_CANCELLED
+        ).world(world.key().asString()).key(world.key()));
+
+        return movePlayersToOverworld(world).thenCompose(ignored -> unload(world, false).thenCompose(success -> {
+            if (!success) return CompletableFuture.failedFuture(new WorldOperationException(
+                    WorldOperationException.Reason.UNLOAD_FAILED
+            ).world(world.key().asString()).key(world.key()));
             WorldFiles.delete(world.getWorldPath());
             worldRegistry.unregister(world.key());
             getScheduler().cancel(world, WorldActionScheduledEvent.ActionType.DELETE);
-            return ActionResult.<Void>result(null, ActionResult.Status.SUCCESS);
-        })).exceptionally(throwable -> {
+            return CompletableFuture.completedFuture(true);
+        })).exceptionallyCompose(throwable -> {
+            final var t = throwable.getCause() != null ? throwable.getCause() : throwable;
+            if (t instanceof WorldOperationException) return CompletableFuture.failedFuture(t);
             getComponentLogger().warn("Failed to delete world", throwable);
-            return ActionResult.result(null, ActionResult.Status.FAILED);
+            return CompletableFuture.failedFuture(new WorldOperationException(
+                    WorldOperationException.Reason.INTERNAL_ERROR,
+                    t
+            ).world(world.key().asString()).key(world.key()));
         });
     }
 
-    private CompletableFuture<ActionResult<World>> regenerateNow(final World world, final Consumer<Level.Builder> consumer) {
-        if (levelView.isOverworld(world)) return CompletableFuture.completedFuture(
-                ActionResult.result(null, ActionResult.Status.REQUIRES_SCHEDULING)
-        );
+    private CompletableFuture<World> regenerateNow(final World world, final Consumer<Level.Builder> consumer) {
+        if (levelView.isOverworld(world)) return CompletableFuture.failedFuture(new WorldOperationException(
+                WorldOperationException.Reason.REGENERATE_REQUIRES_SCHEDULING
+        ).world(world.key().asString()).key(world.key()));
         if (!new WorldRegenerateEvent(world).callEvent())
             return CompletableFuture.failedFuture(new WorldOperationException(
                     WorldOperationException.Reason.EVENT_CANCELLED
@@ -401,9 +403,9 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
         final var players = world.getPlayers();
         return movePlayersToOverworld(world).thenCompose(ignored -> levelView.saveLevelDataAsync(world)
                 .thenCompose(ignored1 -> unload(world, false).thenCompose(success -> {
-                    if (!success) return CompletableFuture.completedFuture(
-                            ActionResult.<World>result(null, ActionResult.Status.UNLOAD_FAILED)
-                    );
+                    if (!success) return CompletableFuture.failedFuture(new WorldOperationException(
+                            WorldOperationException.Reason.UNLOAD_FAILED
+                    ).world(world.key().asString()).key(world.key()));
 
                     WorldFiles.regenerate(world.getWorldPath());
                     getScheduler().cancel(world, WorldActionScheduledEvent.ActionType.REGENERATE);
@@ -415,7 +417,7 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
                         players.forEach(player -> player.teleportAsync(
                                 regenerated.getSpawnLocation(), PlayerTeleportEvent.TeleportCause.PLUGIN
                         ));
-                        return ActionResult.result(regenerated, ActionResult.Status.SUCCESS);
+                        return regenerated;
                     });
                 })));
     }
@@ -441,7 +443,7 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
 
     @Override
     public String getEntryPermission(final World world) {
-        return levelView.getEntryPermission(world);
+        return "worlds.enter." + world.key().asString();
     }
 
     @Override

@@ -7,12 +7,10 @@ import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
-import net.thenextlvl.worlds.WorldOperationException;
 import net.thenextlvl.worlds.WorldsPlugin;
 import net.thenextlvl.worlds.command.argument.KeyArgument;
 import net.thenextlvl.worlds.command.brigadier.SimpleCommand;
 import net.thenextlvl.worlds.command.suggestion.WorldLoadSuggestionProvider;
-import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Entity;
 import org.jspecify.annotations.NullMarked;
 
@@ -44,27 +42,15 @@ final class WorldLoadCommand extends SimpleCommand {
 
         // if (!plugin.getWorldRegistry().isRegistered(key)) return 0; // todo: deny loading worlds that have not been imported
 
-        plugin.load(key).thenAccept(result -> {
-            // todo: AtionResult sucks, rework with proper exceptions
-            if (result.isSuccess()) result.result().ifPresent(world -> {
-                plugin.getWorldRegistry().setEnabled(world.key(), true);
-                plugin.bundle().sendMessage(sender, "world.load.success", placeholder);
-                if (!(sender instanceof final Entity entity)) return;
-                entity.teleportAsync(world.getSpawnLocation(), COMMAND);
-            });
+        plugin.load(key).thenAccept(world -> {
+            plugin.getWorldRegistry().setEnabled(world.key(), true);
+            plugin.bundle().sendMessage(sender, "world.load.success", placeholder);
+            if (!(sender instanceof final Entity entity)) return;
+            entity.teleportAsync(world.getSpawnLocation(), COMMAND);
         }).exceptionally(throwable -> {
             CommandFailureHandler.handle(plugin, sender, throwable, placeholder);
             return null;
         });
         return SINGLE_SUCCESS;
-    }
-
-    private void sendFailure(
-            final CommandSender sender,
-            final WorldOperationException.Reason reason,
-            final Key key
-    ) {
-        CommandFailureHandler.handle(plugin, sender, new WorldOperationException(reason)
-                .key(key).world(key.asString()));
     }
 }
