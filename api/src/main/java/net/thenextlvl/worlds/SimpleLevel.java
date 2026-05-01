@@ -71,10 +71,7 @@ final class SimpleLevel implements Level {
 
     @Override
     public Path getDirectory() {
-        return WorldsAccess.access().getWorldContainer()
-                .resolve("dimensions")
-                .resolve(key.namespace())
-                .resolve(key.value());
+        return WorldsAccess.access().resolveLevelDirectory(key);
     }
 
     @Override

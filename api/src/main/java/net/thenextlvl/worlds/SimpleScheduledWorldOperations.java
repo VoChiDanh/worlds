@@ -49,7 +49,7 @@ final class SimpleScheduledWorldOperations implements ScheduledWorldOperations {
 
         final var action = event.getAction() == null ? consumer : event.getAction().andThen(consumer);
 
-        final var path = world.getWorldFolder().toPath();
+        final var path = world.getWorldPath();
         operations.add(new Operation(type, world.key(), () -> action.accept(path)));
         return ActionResult.Status.SCHEDULED;
     }

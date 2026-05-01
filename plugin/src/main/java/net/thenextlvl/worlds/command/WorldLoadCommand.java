@@ -5,16 +5,15 @@ import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
+import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
+import net.thenextlvl.worlds.Level;
 import net.thenextlvl.worlds.WorldsPlugin;
-import net.thenextlvl.worlds.api.level.Level;
-import net.thenextlvl.worlds.command.argument.LevelPathArgument;
+import net.thenextlvl.worlds.command.argument.KeyArgument;
 import net.thenextlvl.worlds.command.brigadier.SimpleCommand;
-import net.thenextlvl.worlds.command.suggestion.LevelSuggestionProvider;
+import net.thenextlvl.worlds.command.suggestion.WorldLoadSuggestionProvider;
 import org.bukkit.entity.Entity;
 import org.jspecify.annotations.NullMarked;
-
-import java.nio.file.Path;
 
 import static org.bukkit.event.player.PlayerTeleportEvent.TeleportCause.COMMAND;
 
@@ -29,34 +28,31 @@ final class WorldLoadCommand extends SimpleCommand {
         return command.create().then(command.load());
     }
 
-    private RequiredArgumentBuilder<CommandSourceStack, Path> load() {
-        return Commands.argument("path", new LevelPathArgument(plugin))
-                .suggests(new LevelSuggestionProvider(plugin, false)).executes(this);
+    private RequiredArgumentBuilder<CommandSourceStack, Key> load() {
+        return Commands.argument("key", new KeyArgument())
+                .suggests(new WorldLoadSuggestionProvider(plugin)).executes(this);
     }
 
     @Override
     public int run(final CommandContext<CommandSourceStack> context) {
         final var sender = context.getSource().getSender();
-        final var path = context.getArgument("path", Path.class);
-        final var container = plugin.levelView().getWorldContainer();
+        final var key = context.getArgument("key", Key.class);
+        final var path = plugin.resolveLevelDirectory(key);
 
-        if (!path.startsWith(container) || path.getNameCount() != container.getNameCount() + 1) {
-            plugin.bundle().sendMessage(sender, "world.container.load");
-            return 0;
-        }
+        plugin.bundle().sendMessage(sender, "world.load", Placeholder.parsed("world", key.asString()));
 
-        plugin.bundle().sendMessage(sender, "world.load", Placeholder.parsed("world", path.toString()));
-
+        // if (!plugin.getWorldRegistry().isRegistered(key)) return 0; // todo: deny loading worlds that have not been imported
+        
         final var build = plugin.levelView().read(path).map(Level.Builder::build);
-        final var future = build.filter(Level::isWorldKnown).map(Level::createAsync).orElse(null);
+        final var future = build.map(Level::create).orElse(null);
 
         if (future == null) {
-            plugin.bundle().sendMessage(sender, "world.load.failed", Placeholder.parsed("world", path.toString()));
+            plugin.bundle().sendMessage(sender, "world.load.failed", Placeholder.parsed("world", key.asString()));
             return 0;
         }
 
         future.thenAccept(level -> {
-            plugin.levelView().setEnabled(level, true);
+            plugin.getWorldRegistry().setEnabled(level.key(), true);
             plugin.bundle().sendMessage(sender, "world.load.success", Placeholder.parsed("world", level.getName()));
             if (!(sender instanceof final Entity entity)) return;
             entity.teleportAsync(level.getSpawnLocation(), COMMAND);

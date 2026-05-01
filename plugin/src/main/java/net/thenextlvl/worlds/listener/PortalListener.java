@@ -31,14 +31,15 @@ public class PortalListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onEntityPortal(final EntityPortalReadyEvent event) {
-        plugin.linkProvider().getTarget(event.getEntity().getWorld(), event.getPortalType())
+        plugin.levelView().getTarget(event.getEntity().getWorld(), event.getPortalType())
                 .ifPresentOrElse(event::setTargetWorld, () -> event.setTargetWorld(null));
     }
 
     /**
-     * @see net.minecraft.world.level.block.EndPortalBlock#getPortalDestination(ServerLevel, net.minecraft.world.entity.Entity, BlockPos)
+     * @see net.minecraft.world.level.block.EndPortalBlock#getPortalDestination
      * @see net.minecraft.world.entity.Entity#handlePortal()
      */
+    @SuppressWarnings("JavadocReference")
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onEntityPortalEnter(final EntityPortalEnterEvent event) {
         if (!event.getPortalType().equals(PortalType.ENDER)) return;

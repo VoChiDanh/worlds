@@ -8,24 +8,21 @@ import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
+import net.thenextlvl.worlds.Dimension;
+import net.thenextlvl.worlds.Level;
 import net.thenextlvl.worlds.WorldsPlugin;
-import net.thenextlvl.worlds.v4.generator.SimpleGenerator;
-import net.thenextlvl.worlds.experimental.GeneratorType;
-import net.thenextlvl.worlds.LevelStem;
-import net.thenextlvl.worlds.api.level.Level;
-import net.thenextlvl.worlds.preset.Preset;
+import net.thenextlvl.worlds.command.argument.DimensionArgumentType;
 import net.thenextlvl.worlds.command.argument.GeneratorArgument;
 import net.thenextlvl.worlds.command.argument.KeyArgument;
-import net.thenextlvl.worlds.command.argument.LevelPathArgument;
-import net.thenextlvl.worlds.command.argument.LevelStemArgument;
 import net.thenextlvl.worlds.command.argument.WorldPresetArgument;
 import net.thenextlvl.worlds.command.brigadier.OptionCommand;
-import net.thenextlvl.worlds.command.suggestion.LevelSuggestionProvider;
+import net.thenextlvl.worlds.command.suggestion.WorldImportSuggestionProvider;
+import net.thenextlvl.worlds.experimental.GeneratorType;
+import net.thenextlvl.worlds.generator.Generator;
+import net.thenextlvl.worlds.preset.Preset;
 import org.bukkit.entity.Entity;
 import org.jspecify.annotations.NullMarked;
 
-import java.io.IOException;
-import java.nio.file.Path;
 import java.util.Set;
 
 import static org.bukkit.event.player.PlayerTeleportEvent.TeleportCause.COMMAND;
@@ -42,15 +39,13 @@ final class WorldImportCommand extends OptionCommand {
     }
 
     @Override
-    protected RequiredArgumentBuilder<CommandSourceStack, Path> createCommand() {
-        final var command = Commands.argument("path", new LevelPathArgument(plugin))
-                .suggests(new LevelSuggestionProvider(plugin, true)).executes(this);
+    protected RequiredArgumentBuilder<CommandSourceStack, Key> createCommand() {
+        final var command = Commands.argument("key", new KeyArgument())
+                .suggests(new WorldImportSuggestionProvider(plugin)).executes(this);
 
         addOptions(command, false, Set.of(
-                new Option("dimension", new LevelStemArgument(plugin)),
-                new Option("directory", new LevelPathArgument(plugin)),
+                new Option("dimension", new DimensionArgumentType(plugin)),
                 new Option("generator", new GeneratorArgument(plugin), "preset"),
-                new Option("key", new KeyArgument()),
                 new Option("name", StringArgumentType.string()),
                 new Option("preset", new WorldPresetArgument(plugin), "generator")
         ), null);
@@ -61,57 +56,31 @@ final class WorldImportCommand extends OptionCommand {
     @Override
     public int run(final CommandContext<CommandSourceStack> context) {
         final var sender = context.getSource().getSender();
-        final var path = context.getArgument("path", Path.class);
-        final var container = plugin.levelView().getWorldContainer();
-
-        if (!path.startsWith(container) || path.getNameCount() != container.getNameCount() + 1) {
-            plugin.bundle().sendMessage(sender, "world.container.load");
-            return 0;
-        }
+        final var key = context.getArgument("key", Key.class);
+        final var path = plugin.resolveLevelDirectory(key);
 
         final var preset = tryGetArgument(context, "preset", Preset.class).orElse(null);
-        final var dimension = tryGetArgument(context, "dimension", LevelStem.class).orElse(null);
-        final var directory = tryGetArgument(context, "directory", Path.class).filter(dir -> !dir.equals(path)).orElse(null);
+        final var dimension = tryGetArgument(context, "dimension", Dimension.class).orElse(null);
         final var displayName = tryGetArgument(context, "name", String.class).orElse(null);
-        final var generator = tryGetArgument(context, "generator", SimpleGenerator.class).orElse(null);
-        final var key = tryGetArgument(context, "key", Key.class).orElse(null);
+        final var generator = tryGetArgument(context, "generator", Generator.class).orElse(null);
 
         final var name = displayName != null ? displayName : path.getFileName().toString();
 
+        // if (plugin.getWorldRegistry().isRegistered(key)) return 0; // todo: deny importing worlds that have already been imported
+        
         plugin.bundle().sendMessage(sender, "world.import", Placeholder.parsed("world", name));
 
-        if (directory != null) {
-            try {
-                plugin.levelView().copyDirectory(path, directory, null);
-            } catch (final IOException e) {
-                plugin.getComponentLogger().warn("Failed to copy world {} to {}", path, directory, e);
-                plugin.bundle().sendMessage(sender, "world.import.failed", Placeholder.parsed("world", name));
-                return 0;
-            }
-        }
-
-        final var build = plugin.levelView().read(path).map(level -> {
-            if (directory != null) level
-                    .directory(directory)
-                    .worldKnown(false);
-            if (preset != null) level
-                    .generatorType(GeneratorType.FLAT)
-                    .ignoreLevelData(true)
-                    .preset(preset);
-            return level.key(key)
-                    .generator(generator)
-                    .levelStem(dimension)
-                    .name(displayName)
-                    .build();
-        });
-        final var world = build.filter(level -> !level.isWorldKnown()).map(Level::createAsync).orElse(null);
-
-        if (world == null) {
-            plugin.bundle().sendMessage(sender, "world.import.failed", Placeholder.parsed("world", name));
-            return 0;
-        }
+        final var build = Level.builder(key)
+                .name(displayName)
+                .generator(generator)
+                .generatorType(preset != null ? GeneratorType.FLAT : null)
+                .preset(preset)
+                .dimension(dimension)
+                .build();
+        final var world = build.create();
 
         world.thenAccept(level -> {
+            plugin.getWorldRegistry().register(build, true);
             plugin.bundle().sendMessage(sender, "world.import.success",
                     Placeholder.parsed("world", level.getName()));
             if (!(sender instanceof final Entity entity)) return;

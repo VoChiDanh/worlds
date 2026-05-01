@@ -35,12 +35,12 @@ public class SimpleBackupProvider implements BackupProvider {
 
     @Override
     public CompletableFuture<Backup> backup(final World world, @Nullable final String name) {
-        return CompletableFuture.supplyAsync(() -> createBackup(world.getWorldFolder().toPath(), world, name));
+        return CompletableFuture.supplyAsync(() -> createBackup(world.getWorldPath(), world, name));
     }
 
     @Override
     public CompletableFuture<ActionResult<World>> restore(final World world, final Backup backup) {
-        final var worldFolder = world.getWorldFolder().toPath();
+        final var worldFolder = world.getWorldPath();
         return WorldsAccess.access().unload(world, false).thenComposeAsync(success -> {
             if (!success) return CompletableFuture.completedFuture(
                     ActionResult.result(null, ActionResult.Status.FAILED)
@@ -49,7 +49,7 @@ public class SimpleBackupProvider implements BackupProvider {
             if (status != ActionResult.Status.SUCCESS) {
                 return CompletableFuture.completedFuture(ActionResult.result(null, status));
             }
-            return WorldsAccess.access().load(world.getWorldFolder().toPath());
+            return WorldsAccess.access().load(world.getWorldPath());
         });
     }
 

@@ -1,16 +1,12 @@
 package net.thenextlvl.worlds.listener;
 
-import net.kyori.adventure.util.TriState;
+import net.thenextlvl.worlds.Level;
 import net.thenextlvl.worlds.WorldsPlugin;
-import net.thenextlvl.worlds.api.level.Level;
-import net.thenextlvl.worlds.api.link.LinkTree;
 import org.bukkit.World;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.world.WorldLoadEvent;
-import org.bukkit.event.world.WorldSaveEvent;
-import org.bukkit.event.world.WorldUnloadEvent;
 import org.bukkit.permissions.Permission;
 import org.bukkit.permissions.PermissionDefault;
 
@@ -27,7 +23,7 @@ public final class WorldListener implements Listener {
     public void onOverworldLoad(final WorldLoadEvent event) {
         registerEntryPermission(event.getWorld());
         if (!plugin.levelView().isOverworld(event.getWorld())) return;
-        plugin.levelView().listLevels().stream()
+        plugin.levelView().listEnabledLevels().stream()
                 .filter(plugin.levelView()::canLoad)
                 .forEach(this::loadLevel);
     }
@@ -45,21 +41,21 @@ public final class WorldListener implements Listener {
 
     private void loadLevel(final Path path) {
         final var level = plugin.levelView().read(path).map(Level.Builder::build).orElse(null);
-        if (level == null || !level.isEnabled().equals(TriState.TRUE)) return;
+        if (level == null) return;
 
         if (plugin.getServer().getWorld(level.key()) != null) {
-            plugin.getComponentLogger().warn("Skip loading dimension '{}' because another world with the same key ({}) is already loaded", path.getFileName(), level.key());
+            plugin.getComponentLogger().warn("Skip loading dimension '{}' because another world with the same key is already loaded", level.key());
             return;
         }
         if (plugin.getServer().getWorld(level.getName()) != null) {
-            plugin.getComponentLogger().warn("Skip loading dimension '{}' because another world with the same name ({}) is already loaded", path.getFileName(), level.getName());
+            plugin.getComponentLogger().warn("Skip loading dimension '{}' because another world with the same name is already loaded", level.getName());
             return;
         }
 
-        level.createAsync().thenAccept(world -> plugin.getComponentLogger().debug(
+        level.create().thenAccept(world -> plugin.getComponentLogger().debug(
                 "Loaded dimension {} ({}) from {}",
                 world.key().asString(), level.getGeneratorType().key().asString(),
-                world.getWorldFolder().getPath()
+                world.getWorldPath()
         )).exceptionally(throwable -> {
             final var t = throwable.getCause() != null ? throwable.getCause() : throwable;
             if (plugin.handler().isDirectoryLockException(t)) {
@@ -73,24 +69,4 @@ public final class WorldListener implements Listener {
         });
     }
 
-    @EventHandler(priority = EventPriority.LOWEST)
-    public void onWorldLoad(final WorldLoadEvent event) {
-        plugin.linkProvider().loadTree(event.getWorld())
-                .filter(LinkTree::isEmpty)
-                .filter(linkTree -> plugin.levelView().isOverworld(linkTree.getOverworld()))
-                .ifPresent(linkTree -> {
-                    plugin.levelView().getNether().ifPresent(linkTree::setNether);
-                    plugin.levelView().getEnd().ifPresent(linkTree::setEnd);
-                });
-    }
-
-    @EventHandler(priority = EventPriority.LOWEST)
-    public void onWorldLoad(final WorldUnloadEvent event) {
-        plugin.linkProvider().unloadTree(event.getWorld());
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR)
-    public void onWorldSave(final WorldSaveEvent event) {
-        plugin.linkProvider().persistTree(event.getWorld());
-    }
 }

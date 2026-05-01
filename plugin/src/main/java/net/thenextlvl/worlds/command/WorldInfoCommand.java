@@ -6,9 +6,6 @@ import io.papermc.paper.command.brigadier.CommandSourceStack;
 import net.kyori.adventure.text.minimessage.tag.resolver.Formatter;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.thenextlvl.worlds.WorldsPlugin;
-import net.thenextlvl.worlds.experimental.DimensionType;
-import net.thenextlvl.worlds.experimental.GeneratorType;
-import net.thenextlvl.worlds.api.level.Level;
 import net.thenextlvl.worlds.command.brigadier.SimpleCommand;
 import org.bukkit.World;
 import org.jspecify.annotations.NullMarked;
@@ -42,20 +39,17 @@ final class WorldInfoCommand extends SimpleCommand {
         final var sender = context.getSource().getSender();
         final var world = tryGetArgument(context, "world", World.class)
                 .orElseGet(() -> context.getSource().getLocation().getWorld());
-        final var path = world.getWorldFolder().toPath();
-        final var root = plugin.levelView().read(path).map(Level.Builder::build);
+        final var path = world.getWorldPath();
         plugin.bundle().sendMessage(sender, "world.info.name",
                 Placeholder.parsed("world", world.key().asString()),
                 Placeholder.parsed("name", world.getName()));
         plugin.bundle().sendMessage(sender, "world.info.players",
                 Formatter.number("players", world.getPlayers().size()));
         plugin.bundle().sendMessage(sender, "world.info.type",
-                Placeholder.parsed("type", root.map(Level::getGeneratorType)
-                        .orElse(GeneratorType.NORMAL).name()));
+                Placeholder.parsed("type", plugin.handler().getGeneratorType(world).name()));
         plugin.bundle().sendMessage(sender, "world.info.dimension",
-                Placeholder.parsed("dimension", root.map(level -> level.getLevelStem().dimensionType())
-                        .orElse(DimensionType.OVERWORLD).key().asString()));
-        plugin.levelView().getGenerator(world).ifPresent(generator -> plugin.bundle().sendMessage(sender,
+                Placeholder.parsed("dimension", plugin.handler().getDimension(world).key().asString()));
+        plugin.handler().getGenerator(world).ifPresent(generator -> plugin.bundle().sendMessage(sender,
                 "world.info.generator", Placeholder.parsed("generator", generator.getName())));
         plugin.bundle().sendMessage(sender, "world.info.seed",
                 Placeholder.parsed("seed", String.valueOf(world.getSeed())));

@@ -6,16 +6,15 @@ import dev.faststats.core.data.Metric;
 import io.papermc.paper.ServerBuildInfo;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import net.kyori.adventure.key.Key;
+import net.thenextlvl.binder.StaticBinder;
 import net.thenextlvl.i18n.ComponentBundle;
-import net.thenextlvl.worlds.generator.GeneratorView;
 import net.thenextlvl.worlds.command.SaveAllCommand;
 import net.thenextlvl.worlds.command.SaveOffCommand;
 import net.thenextlvl.worlds.command.SaveOnCommand;
 import net.thenextlvl.worlds.command.SeedCommand;
 import net.thenextlvl.worlds.command.WorldCommand;
 import net.thenextlvl.worlds.command.WorldSetSpawnCommand;
-import net.thenextlvl.worlds.level.LevelData;
-import net.thenextlvl.worlds.link.WorldLinkProvider;
+import net.thenextlvl.worlds.generator.GeneratorView;
 import net.thenextlvl.worlds.listener.PortalListener;
 import net.thenextlvl.worlds.listener.TeleportListener;
 import net.thenextlvl.worlds.listener.WorldListener;
@@ -23,14 +22,16 @@ import net.thenextlvl.worlds.model.MessageMigrator;
 import net.thenextlvl.worlds.version.PluginVersionChecker;
 import net.thenextlvl.worlds.versions.PluginAccess;
 import net.thenextlvl.worlds.versions.VersionHandler;
+import net.thenextlvl.worlds.versions.v26_1_2.SimpleVersionHandler;
 import net.thenextlvl.worlds.view.FoliaLevelView;
 import net.thenextlvl.worlds.view.PaperLevelView;
 import org.bstats.bukkit.Metrics;
 import org.bukkit.World;
+import org.bukkit.generator.ChunkGenerator;
 import org.bukkit.plugin.Plugin;
-import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
 import java.io.IOException;
 import java.nio.file.AccessDeniedException;
@@ -39,12 +40,14 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 @NullMarked
-public final class WorldsPlugin extends JavaPlugin implements PluginAccess {
+public final class WorldsPlugin extends JavaPlugin implements PluginAccess, WorldsAccess {
     public static final String ISSUES = "https://github.com/TheNextLvl-net/worlds/issues/new?template=bug_report.yml";
     public static final boolean RUNNING_FOLIA = ServerBuildInfo.buildInfo().isBrandCompatible(Key.key("papermc", "folia"));
 
@@ -54,12 +57,13 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess {
             .ignoreError(IllegalStateException.class, "World mismatch: expected .* but got .*")
             .ignoreErrorType(AccessDeniedException.class);
 
-    private final GeneratorView generatorView = new net.thenextlvl.worlds.v4.generator.SimpleGeneratorView();
+    private final GeneratorView generatorView = GeneratorView.view();
     private final PaperLevelView levelView = versionHandler.foliaSupport()
             .<PaperLevelView>map(support -> new FoliaLevelView(this, support))
             .orElseGet(() -> new PaperLevelView(this));
+    private final SimpleWorldRegistry worldRegistry = new SimpleWorldRegistry(this);
 
-    private final WorldLinkProvider linkProvider = new WorldLinkProvider(this);
+    private BackupProvider backupProvider = new SimpleBackupProvider();
 
     private final Path presetsFolder = getDataPath().resolve("presets");
     private final Path translations = getDataPath().resolve("translations");
@@ -84,14 +88,15 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess {
     private final Metrics metrics = new Metrics(this, 19652);
 
     public WorldsPlugin() {
+        StaticBinder.getInstance(WorldsAccess.class.getClassLoader()).bind(WorldsAccess.class, this);
         getComponentLogger().info("Using implementation: {}", versionHandler.getClass().getName());
         registerCommands();
     }
 
     private VersionHandler selectImplementation() {
         final var s = ServerBuildInfo.buildInfo().minecraftVersionId();
-        if (s.equals("26.1") || s.contains("26.1.1") || s.contains("26.1.2")) {
-            return new net.thenextlvl.worlds.versions.v26_1_1.SimpleVersionHandler(this);
+        if (s.contains("26.1.2")) {
+            return new SimpleVersionHandler(this);
         }
         throw new IllegalStateException("No implementation found for version: " + s + ", check for an update.");
     }
@@ -99,37 +104,20 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess {
     @Override
     public void onLoad() {
         createPresetsFolder();
-        if (!RUNNING_FOLIA) checkPerWorldsRemnants();
         versionChecker.checkVersion();
-        registerServices();
     }
 
     @Override
     public void onDisable() {
-        linkProvider.persistTrees();
+        getScheduler().runScheduledOperations();
     }
 
     @Override
     public void onEnable() {
         fastStats.ready();
+        worldRegistry.read();
         warnVoidGeneratorPlugin();
         registerListeners();
-    }
-
-    private void checkPerWorldsRemnants() {
-        if (getServer().getPluginManager().getPlugin("PerWorlds") != null) return;
-        try (final var files = Files.list(Path.of("plugins", "PerWorlds", "groups"))) {
-            if (files.noneMatch(path -> {
-                return switch (path.getFileName().toString()) {
-                    case "unowned", "unowned.dat", "unowned.dat_old" -> false;
-                    default -> true;
-                };
-            })) return;
-            getComponentLogger().warn("It looks like you have been using world groups before.");
-            getComponentLogger().warn("World groups were provided by PerWorlds which is no longer inbuilt!");
-            getComponentLogger().warn("If you want to continue using it you can download it from https://modrinth.com/project/lpfQmSV2");
-        } catch (final IOException ignored) {
-        }
     }
 
     private void warnVoidGeneratorPlugin() {
@@ -151,27 +139,17 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess {
         return bundle;
     }
 
-    @Override
     public GeneratorView generatorView() {
         return generatorView;
     }
 
-    @Override
-    public Level.Builder levelBuilder(final Path directory) {
-        return new LevelData.Builder(this, directory);
-    }
-
-    @Override
     public Level.Builder levelBuilder(final World world) {
-        return levelView().read(world.getWorldFolder().toPath())
-                .orElseGet(() -> levelBuilder(world.getWorldFolder().toPath()))
+        return levelView().read(world.getWorldPath())
+                .orElseGet(() -> Level.builder(world.key()))
                 .bonusChest(handler().hasBonusChest(world))
                 .hardcore(world.isHardcore())
                 .structures(world.canGenerateStructures())
-                .worldKnown(true)
                 .seed(world.getSeed())
-                .biomeProvider(world.getBiomeProvider())
-                .chunkGenerator(world.getGenerator())
                 .key(world.key())
                 .dimension(handler().getDimension(world))
                 .seed(world.getSeed())
@@ -195,14 +173,8 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess {
         return future;
     }
 
-    @Override
     public PaperLevelView levelView() {
         return levelView;
-    }
-
-    @Override
-    public WorldLinkProvider linkProvider() {
-        return linkProvider;
     }
 
     private void createPresetsFolder() {
@@ -211,10 +183,6 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess {
         } catch (final IOException e) {
             getComponentLogger().warn("Failed to create presets folder", e);
         }
-    }
-
-    private void registerServices() {
-        getServer().getServicesManager().register(WorldsProvider.class, this, this, ServicePriority.Highest);
     }
 
     private void registerListeners() {
@@ -273,5 +241,150 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess {
     @Override
     public boolean isRunningFolia() {
         return RUNNING_FOLIA;
+    }
+
+    @Override
+    public WorldRegistry getWorldRegistry() {
+        return worldRegistry;
+    }
+
+    @Override
+    public Stream<Dimension> listDimensions() {
+        return handler().listDimensions();
+    }
+
+    @Override
+    public Dimension getDimension(final World world) {
+        return handler().getDimension(world);
+    }
+
+    @Override
+    public Path getLevelDirectory() {
+        return getServer().getLevelDirectory();
+    }
+
+    @Override
+    public Level getLevel(final World world) {
+        return levelBuilder(world).build();
+    }
+
+    @Override
+    public Optional<Level> getLevel(final String name) {
+        return Optional.ofNullable(getServer().getWorld(name)).map(this::getLevel);
+    }
+
+    @Override
+    public Stream<Level> getLevels() {
+        return getServer().getWorlds().stream().map(this::getLevel);
+    }
+
+    @Override
+    public Stream<Path> listLevels() {
+        return levelView.listLevels().stream();
+    }
+
+    @Override
+    public boolean isLevel(final Path path) {
+        return levelView.isLevel(path);
+    }
+
+    @Override
+    public Optional<Level.Builder> read(final Path directory) {
+        return levelView.read(directory);
+    }
+
+    @Override
+    public CompletableFuture<ActionResult<World>> load(final Path directory) {
+        return read(directory)
+                .map(Level.Builder::build)
+                .map(level -> level.create().thenApply(world -> {
+                    worldRegistry.register(level, true);
+                    return ActionResult.result(world, ActionResult.Status.SUCCESS);
+                }))
+                .orElseGet(() -> CompletableFuture.completedFuture(ActionResult.result(null, ActionResult.Status.FAILED)));
+    }
+
+    @Override
+    public CompletableFuture<World> create(final Level level) {
+        return supplyGlobal(() -> handler().createAsync(level).thenApply(world -> {
+            // todo: api to make worlds autoload
+            worldRegistry.register(level, true);
+            return world;
+        }));
+    }
+
+    @Override
+    public CompletableFuture<Boolean> unload(final World world, final boolean save) {
+        worldRegistry.setEnabled(world.key(), false);
+        return levelView.unloadAsync(world, save);
+    }
+
+    @Override
+    public CompletableFuture<Boolean> save(final World world, final boolean flush) {
+        return levelView.saveAsync(world, flush).thenApply(ignored -> true);
+    }
+
+    @Override
+    public CompletableFuture<ActionResult<World>> clone(final World world, final boolean full) {
+        return levelView.cloneAsync(world, builder -> {
+                }, full)
+                .thenApply(clone -> ActionResult.result(clone, ActionResult.Status.SUCCESS));
+    }
+
+    @Override
+    public CompletableFuture<ActionResult<Void>> delete(final World world) {
+        return levelView.deleteAsync(world, false).thenApply(status -> ActionResult.result(null, status));
+    }
+
+    @Override
+    public CompletableFuture<ActionResult<World>> regenerate(final World world) {
+        return regenerate(world, builder -> {
+        });
+    }
+
+    @Override
+    public CompletableFuture<ActionResult<World>> regenerate(final World world, final Consumer<Level.Builder> builder) {
+        return levelView.regenerateAsync(world, false, builder)
+                .thenApply(status -> ActionResult.result(status == ActionResult.Status.SUCCESS ? getServer().getWorld(world.key()) : null, status));
+    }
+
+    @Override
+    public boolean isEnabled(final World world) {
+        return worldRegistry.isEnabled(world.key());
+    }
+
+    @Override
+    public void setEnabled(final World world, final boolean enabled) {
+        worldRegistry.setEnabled(world.key(), enabled);
+    }
+
+    @Override
+    public String getEntryPermission(final World world) {
+        return levelView.getEntryPermission(world);
+    }
+
+    @Override
+    public BackupProvider getBackupProvider() {
+        return backupProvider;
+    }
+
+    @Override
+    public void setBackupProvider(final BackupProvider provider) {
+        this.backupProvider = provider;
+    }
+
+    @Override
+    public Path getDimensionsRoot() {
+        return getServer().getLevelDirectory().resolve("dimensions");
+    }
+
+    @Override
+    public Path resolveLevelDirectory(final Key key) {
+        return getDimensionsRoot().resolve(key.namespace()).resolve(key.value());
+    }
+
+    @Override
+    public @Nullable ChunkGenerator getDefaultWorldGenerator(final String worldName, @Nullable final String id) {
+        return super.getDefaultWorldGenerator(worldName, id);
     }
 }

@@ -265,7 +265,7 @@ public final class SimpleVersionHandler extends VersionHandler {
 
             final WorldDimensions.Complete complete = worldDimensions.bake(contextLevelStemRegistry);
             if (complete.dimensions().getValue(actualDimension) == null) {
-                return CompletableFuture.failedFuture(new IllegalStateException("Missing generated level stem " + actualDimension + " for world " + name)); // Worlds - complete exceptionally
+                return CompletableFuture.failedFuture(new IllegalStateException("Missing generated level stem " + actualDimension + " for world " + key)); // Worlds - complete exceptionally
             }
 
             worldGenSettings = new WorldGenSettings(worldOptions, worldDimensions);
@@ -300,7 +300,7 @@ public final class SimpleVersionHandler extends VersionHandler {
             customStem = contextLevelStemRegistry.getValue(actualDimension);
         }
         if (customStem == null) {
-            return CompletableFuture.failedFuture(new IllegalStateException("Missing level stem for world " + name + " using key " + actualDimension)); // Worlds - complete exceptionally
+            return CompletableFuture.failedFuture(new IllegalStateException("Missing level stem for world " + key + " using key " + actualDimension)); // Worlds - complete exceptionally
         }
 
         final var environment = toEnvironment(level.getDimension()); // Worlds - get environment from dimension
@@ -337,7 +337,7 @@ public final class SimpleVersionHandler extends VersionHandler {
 
         // Worlds start - ensure world is memoized before adding to server
         if (server.getWorld(name) == null) return CompletableFuture.failedFuture(
-                new IllegalStateException("World with name " + name + " was not properly memoized")
+                new IllegalStateException("World " + key + " was not properly memoized")
         );
         // Worlds end
 

@@ -67,7 +67,7 @@ final class WorldUnloadCommand extends SimpleCommand {
                 }))
                 .toArray(CompletableFuture[]::new)
         ).thenCompose(ignored -> {
-            plugin.levelView().setEnabled(world, false);
+            plugin.getWorldRegistry().setEnabled(world.key(), false);
             return plugin.levelView().unloadAsync(world, true);
         }).thenAccept(success -> {
             final var message = success ? "world.unload.success" : "world.unload.failed";

@@ -1,7 +1,7 @@
 package net.thenextlvl.worlds;
 
+import net.kyori.adventure.key.Key;
 import net.thenextlvl.binder.StaticBinder;
-import org.bukkit.PortalType;
 import org.bukkit.World;
 import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.ApiStatus;
@@ -22,9 +22,9 @@ public interface WorldsAccess extends Plugin {
         }
         return Cache.INSTANCE;
     }
-    // todo: Stuff that has to go
 
-    Optional<World> getTarget(World world, PortalType type);
+    @Contract(pure = true)
+    WorldRegistry getWorldRegistry();
 
     @Contract(pure = true)
     Stream<Dimension> listDimensions();
@@ -33,7 +33,7 @@ public interface WorldsAccess extends Plugin {
     Dimension getDimension(World world);
 
     @Contract(pure = true)
-    Path getWorldContainer();
+    Path getLevelDirectory();
 
     @Contract(pure = true)
     Level getLevel(World world);
@@ -86,11 +86,19 @@ public interface WorldsAccess extends Plugin {
     String getEntryPermission(World world);
 
     @Contract(pure = true)
-    ScheduledWorldOperations getScheduler();
+    default ScheduledWorldOperations getScheduler() {
+        return SimpleScheduledWorldOperations.INSTANCE;
+    }
 
     @Contract(pure = true)
     BackupProvider getBackupProvider();
 
     @Contract(mutates = "this")
     void setBackupProvider(BackupProvider provider);
+
+    @Contract(pure = true)
+    Path getDimensionsRoot();
+
+    @Contract(pure = true)
+    Path resolveLevelDirectory(Key key);
 }

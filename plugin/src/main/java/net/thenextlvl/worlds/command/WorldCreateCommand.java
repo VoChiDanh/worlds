@@ -9,19 +9,19 @@ import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
+import net.thenextlvl.worlds.Dimension;
+import net.thenextlvl.worlds.Level;
 import net.thenextlvl.worlds.WorldsPlugin;
-import net.thenextlvl.worlds.v4.generator.SimpleGenerator;
-import net.thenextlvl.worlds.experimental.GeneratorType;
-import net.thenextlvl.worlds.LevelStem;
-import net.thenextlvl.worlds.api.level.Level;
-import net.thenextlvl.worlds.preset.Preset;
+import net.thenextlvl.worlds.command.argument.DimensionArgumentType;
 import net.thenextlvl.worlds.command.argument.GeneratorArgument;
 import net.thenextlvl.worlds.command.argument.GeneratorTypeArgument;
 import net.thenextlvl.worlds.command.argument.KeyArgument;
-import net.thenextlvl.worlds.command.argument.LevelStemArgument;
 import net.thenextlvl.worlds.command.argument.SeedArgument;
 import net.thenextlvl.worlds.command.argument.WorldPresetArgument;
 import net.thenextlvl.worlds.command.brigadier.OptionCommand;
+import net.thenextlvl.worlds.experimental.GeneratorType;
+import net.thenextlvl.worlds.generator.Generator;
+import net.thenextlvl.worlds.preset.Preset;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Entity;
 import org.jspecify.annotations.NullMarked;
@@ -30,6 +30,7 @@ import org.jspecify.annotations.Nullable;
 import java.nio.file.Path;
 import java.util.Set;
 
+import static net.thenextlvl.worlds.view.PaperLevelView.createKey;
 import static org.bukkit.event.player.PlayerTeleportEvent.TeleportCause.COMMAND;
 
 @NullMarked
@@ -54,7 +55,7 @@ final class WorldCreateCommand extends OptionCommand {
         ), builder -> addOptions(builder, false, Set.of(
                 new Option("bonus-chest", BoolArgumentType.bool()),
                 new Option("hardcore", BoolArgumentType.bool()),
-                new Option("dimension", new LevelStemArgument(plugin)),
+                new Option("dimension", new DimensionArgumentType(plugin)),
                 new Option("key", new KeyArgument()),
                 new Option("seed", new SeedArgument()),
                 new Option("structures", BoolArgumentType.bool())
@@ -79,7 +80,8 @@ final class WorldCreateCommand extends OptionCommand {
         }
 
         plugin.bundle().sendMessage(sender, "world.create", placeholder);
-        level.createAsync().thenAccept(world -> {
+        level.create().thenAccept(world -> {
+            plugin.getWorldRegistry().setEnabled(level.key(), true);
             plugin.bundle().sendMessage(sender, "world.create.success", placeholder);
             if (!(sender instanceof final Entity entity)) return;
             entity.teleportAsync(world.getSpawnLocation(), COMMAND);
@@ -98,10 +100,11 @@ final class WorldCreateCommand extends OptionCommand {
             plugin.bundle().sendMessage(sender, "world.container.create");
             return null;
         } else try {
-            return plugin.levelBuilder(plugin.levelView().findFreePath(name))
-                    .levelStem(tryGetArgument(context, "dimension", LevelStem.class).orElse(null))
-                    .generator(tryGetArgument(context, "generator", SimpleGenerator.class).orElse(null))
-                    .key(tryGetArgument(context, "key", Key.class).orElse(null))
+            final var key = tryGetArgument(context, "key", Key.class)
+                    .orElseGet(() -> plugin.levelView().findFreeKey(Key.key("worlds", createKey(name))));
+            return Level.builder(key)
+                    .dimension(tryGetArgument(context, "dimension", Dimension.class).orElse(null))
+                    .generator(tryGetArgument(context, "generator", Generator.class).orElse(null))
                     .preset(tryGetArgument(context, "preset", Preset.class).orElse(null))
                     .seed(tryGetArgument(context, "seed", Long.class).orElse(null))
                     .structures(tryGetArgument(context, "structures", Boolean.class).orElse(null))
