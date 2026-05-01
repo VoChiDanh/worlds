@@ -1,4 +1,4 @@
-package net.thenextlvl.worlds.versions.v26_1_1;
+package net.thenextlvl.worlds.versions.v26_1_2;
 
 import ca.spottedleaf.moonrise.common.util.TickThread;
 import com.google.common.base.Preconditions;

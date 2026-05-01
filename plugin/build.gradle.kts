@@ -10,10 +10,11 @@ plugins {
 
 dependencies {
     compileOnly("io.papermc.paper:paper-api:26.1.2.build.+")
+    testImplementation("io.papermc.paper:paper-api:26.1.2.build.+")
     implementation(project(":api"))
 
     implementation(project(":version-specifics"))
-    implementation(project(":version-specifics:v26.1.1"))
+    implementation(project(":version-specifics:v26.1.2"))
 
     implementation("net.thenextlvl.version-checker:modrinth-paper:1.0.1")
     implementation("net.thenextlvl:i18n:1.2.0")
