@@ -71,7 +71,8 @@ public final class SimpleWorldRegistry implements WorldRegistry {
 
     @Override
     public void setEnabled(final Key key, final boolean enabled) {
-        entries.computeIfPresent(key, (ignored, entry) -> entry.withEnabled(enabled)); // todo: throw if not registered
+        final var entry = entries.computeIfPresent(key, (ignored, current) -> current.withEnabled(enabled));
+        if (entry == null) throw new IllegalStateException("World is not registered: " + key);
         save();
     }
 
