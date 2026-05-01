@@ -51,7 +51,7 @@ final class WorldRegenerateCommand extends SimpleCommand {
         final var world = context.getArgument("world", World.class);
         final var schedule = flags.contains("--schedule");
         if (!schedule) plugin.bundle().sendMessage(context.getSource().getSender(), "world.regenerate",
-                Placeholder.parsed("world", world.getName()));
+                Placeholder.parsed("world", world.key().asString()));
         plugin.regenerate(world, schedule, builder -> {
             if (flags.contains("--seed")) builder.seed(null).resetSpawnPosition(true);
         }).thenAccept(result -> {
@@ -63,9 +63,10 @@ final class WorldRegenerateCommand extends SimpleCommand {
                 case FAILED -> "world.regenerate.failed";
             };
             plugin.bundle().sendMessage(context.getSource().getSender(), message,
-                    Placeholder.parsed("world", world.getName()));
+                    Placeholder.parsed("world", world.key().asString()));
         }).exceptionally(throwable -> {
-            CommandFailureHandler.handle(plugin, context.getSource().getSender(), throwable, Placeholder.parsed("world", world.getName()));
+            CommandFailureHandler.handle(plugin, context.getSource().getSender(), throwable,
+                    Placeholder.parsed("world", world.key().asString()));
             return null;
         });
         return SINGLE_SUCCESS;

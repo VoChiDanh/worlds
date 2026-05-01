@@ -35,7 +35,7 @@ final class WorldBackupDeleteCommand extends SimpleCommand {
         plugin.getBackupProvider().delete(world, backup).thenAccept(success -> {
             final var message = success ? "world.backup.delete.success" : "world.backup.delete.failed";
             plugin.bundle().sendMessage(context.getSource().getSender(), message,
-                    Placeholder.parsed("world", world.getName()),
+                    Placeholder.parsed("world", world.key().asString()),
                     Placeholder.parsed("identifier", backup));
         });
         return SINGLE_SUCCESS;

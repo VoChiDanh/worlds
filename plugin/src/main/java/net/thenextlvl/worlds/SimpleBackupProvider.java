@@ -2,7 +2,6 @@ package net.thenextlvl.worlds;
 
 import net.kyori.adventure.key.Key;
 import net.thenextlvl.worlds.event.WorldActionScheduledEvent;
-import org.bukkit.Keyed;
 import org.bukkit.World;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
@@ -72,10 +71,10 @@ public class SimpleBackupProvider implements BackupProvider {
 
     @Override
     public CompletableFuture<Stream<Backup>> listBackups() {
-        return CompletableFuture.supplyAsync(() -> WorldsAccess.access()
-                .getServer().getWorlds().stream()
-                .map(Keyed::key)
-                .flatMap(this::listBackupFiles));
+        final var worlds = WorldsAccess.access().getServer().getWorlds();
+        return CompletableFuture.supplyAsync(() -> worlds.stream().map(World::key)
+                .flatMap(this::listBackupFiles)
+                .sorted(Comparator.comparing(Backup::createdAt).reversed()));
     }
 
     @Override
@@ -122,12 +121,15 @@ public class SimpleBackupProvider implements BackupProvider {
     }
 
     private Path resolveBackupFolder(final Key key) {
+        return resolveBackupRoot().resolve(key.namespace()).resolve(key.value());
+    }
+
+    private Path resolveBackupRoot() {
         var backupFolder = System.getenv("WORLDS_BACKUP_FOLDER");
         if (backupFolder == null) backupFolder = System.getProperty("worlds.backup.folder");
-        if (backupFolder != null) return Path.of(backupFolder).resolve(key.namespace()).resolve(key.value());
+        if (backupFolder != null) return Path.of(backupFolder);
         final var parent = WorldsAccess.access().getServer().getLevelDirectory().getParent();
-        final var root = parent != null ? parent.resolve("backups") : Path.of("backups");
-        return root.resolve(key.namespace()).resolve(key.value());
+        return parent != null ? parent.resolve("backups") : Path.of("backups");
     }
 
     private Path resolveBackupPath(final Key key, final String name) {
@@ -142,7 +144,7 @@ public class SimpleBackupProvider implements BackupProvider {
             throw new WorldOperationException(
                     WorldOperationException.Reason.BACKUP_DIRECTORY_FAILED,
                     e
-            ).key(world.key()).world(world.getName()).path(folder);
+            ).key(world.key()).world(world.key().asString()).path(folder);
         }
         final var timestamp = FORMATTER.format(Instant.now());
         final var fileName = name != null ? name + ".zip" : findAvailableName(folder, timestamp);
@@ -150,7 +152,7 @@ public class SimpleBackupProvider implements BackupProvider {
         if (name != null && Files.isRegularFile(backupPath)) {
             throw new WorldOperationException(
                     WorldOperationException.Reason.BACKUP_NAME_EXISTS
-            ).key(world.key()).world(world.getName()).backup(name).path(backupPath);
+            ).key(world.key()).world(world.key().asString()).backup(name).path(backupPath);
         }
         try (final var output = new ZipOutputStream(new BufferedOutputStream(Files.newOutputStream(
                 backupPath, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE
@@ -171,7 +173,7 @@ public class SimpleBackupProvider implements BackupProvider {
             throw new WorldOperationException(
                     WorldOperationException.Reason.BACKUP_ZIP_FAILED,
                     e
-            ).key(world.key()).world(world.getName()).backup(name != null ? name : fileName.substring(0, fileName.length() - 4)).path(backupPath);
+            ).key(world.key()).world(world.key().asString()).backup(name != null ? name : fileName.substring(0, fileName.length() - 4)).path(backupPath);
         }
         try {
             final var attrs = Files.readAttributes(backupPath, BasicFileAttributes.class);
@@ -187,7 +189,7 @@ public class SimpleBackupProvider implements BackupProvider {
             throw new WorldOperationException(
                     WorldOperationException.Reason.BACKUP_READ_FAILED,
                     e
-            ).key(world.key()).world(world.getName()).path(backupPath);
+            ).key(world.key()).world(world.key().asString()).path(backupPath);
         }
     }
 
@@ -233,7 +235,9 @@ public class SimpleBackupProvider implements BackupProvider {
             return files.filter(Files::isRegularFile)
                     .filter(path -> path.getFileName().toString().endsWith(".zip"))
                     .map(path -> toBackup(path, key))
-                    .sorted(Comparator.comparing(Backup::createdAt).reversed());
+                    .sorted(Comparator.comparing(Backup::createdAt).reversed())
+                    .toList()
+                    .stream();
         } catch (final IOException e) {
             return Stream.empty();
         }

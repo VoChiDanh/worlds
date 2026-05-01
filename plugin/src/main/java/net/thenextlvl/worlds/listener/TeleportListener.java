@@ -22,7 +22,7 @@ public final class TeleportListener implements Listener {
         if (event.getFrom().getWorld().equals(world)) return;
         if (event.getPlayer().hasPermission(plugin.levelView().getEntryPermission(world))) return;
         plugin.bundle().sendMessage(event.getPlayer(), "world.entry.denied",
-                Placeholder.parsed("world", world.getName()));
+                Placeholder.parsed("world", world.key().asString()));
         event.setCancelled(true);
     }
 }

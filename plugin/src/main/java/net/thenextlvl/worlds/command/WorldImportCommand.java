@@ -80,7 +80,7 @@ final class WorldImportCommand extends OptionCommand {
         build.create().thenAccept(level -> {
             plugin.getWorldRegistry().register(build, true);
             plugin.bundle().sendMessage(sender, "world.import.success",
-                    Placeholder.parsed("world", level.getName()));
+                    Placeholder.parsed("world", level.key().asString()));
             if (!(sender instanceof final Entity entity)) return;
             entity.teleportAsync(level.getSpawnLocation(), COMMAND);
         }).exceptionally(throwable -> {

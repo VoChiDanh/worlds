@@ -347,7 +347,7 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
             if (!new WorldBackupRestoreEvent(world, backup).callEvent())
                 return CompletableFuture.failedFuture(new WorldOperationException(
                         WorldOperationException.Reason.EVENT_CANCELLED
-                ).world(world.getName()).key(world.key()).backup(backup.name()));
+                ).world(world.key().asString()).key(world.key()).backup(backup.name()));
             final var players = world.getPlayers();
             return movePlayersToOverworld(world).thenCompose(ignored -> getBackupProvider().restore(world, backup)
                     .thenApply(result -> {
@@ -396,7 +396,7 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
         if (!new WorldRegenerateEvent(world).callEvent())
             return CompletableFuture.failedFuture(new WorldOperationException(
                     WorldOperationException.Reason.EVENT_CANCELLED
-            ).world(world.getName()).key(world.key()));
+            ).world(world.key().asString()).key(world.key()));
 
         final var players = world.getPlayers();
         return movePlayersToOverworld(world).thenCompose(ignored -> levelView.saveLevelDataAsync(world)

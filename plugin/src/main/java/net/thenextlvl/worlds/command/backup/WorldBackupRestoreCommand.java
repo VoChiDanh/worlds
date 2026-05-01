@@ -60,7 +60,7 @@ final class WorldBackupRestoreCommand extends SimpleCommand {
         final var name = tryGetArgument(context, "backup", String.class);
         final var schedule = flags.contains("--schedule");
         if (!schedule) plugin.bundle().sendMessage(context.getSource().getSender(), "world.backup.restore",
-                Placeholder.parsed("world", world.getName()));
+                Placeholder.parsed("world", world.key().asString()));
 
         final var resolved = name
                 .map(value -> plugin.getBackupProvider().findBackup(world, value))
@@ -71,7 +71,7 @@ final class WorldBackupRestoreCommand extends SimpleCommand {
             
             if (backup == null) {
                 plugin.bundle().sendMessage(context.getSource().getSender(), "world.backup.list.empty",
-                        Placeholder.parsed("world", world.getName()));
+                        Placeholder.parsed("world", world.key().asString()));
                 return;
             }
 
@@ -84,10 +84,10 @@ final class WorldBackupRestoreCommand extends SimpleCommand {
                     case FAILED -> "world.backup.restore.failed";
                 };
                 plugin.bundle().sendMessage(context.getSource().getSender(), message,
-                        Placeholder.parsed("world", result.result().map(World::getName).orElse(world.getName())),
+                        Placeholder.parsed("world", result.result().map(World::key).orElse(world.key()).asString()),
                         Placeholder.parsed("identifier", backup.name()));
             }).exceptionally(throwable -> {
-                CommandFailureHandler.handle(plugin, context.getSource().getSender(), throwable, Placeholder.parsed("world", world.getName()),
+                CommandFailureHandler.handle(plugin, context.getSource().getSender(), throwable, Placeholder.parsed("world", world.key().asString()),
                         Placeholder.parsed("identifier", backup.name()),
                         Placeholder.parsed("backup", backup.name()));
                 return null;

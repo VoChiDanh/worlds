@@ -30,7 +30,7 @@ final class WorldSpawnCommand extends SimpleCommand {
         final var player = (Player) context.getSource().getSender();
         player.teleportAsync(player.getWorld().getSpawnLocation(), COMMAND).thenAccept(success -> {
             final var message = success ? "world.teleport.self" : "world.teleport.failed";
-            plugin.bundle().sendMessage(player, message, Placeholder.parsed("world", player.getWorld().getName()));
+            plugin.bundle().sendMessage(player, message, Placeholder.parsed("world", player.getWorld().key().asString()));
         });
         return SINGLE_SUCCESS;
     }

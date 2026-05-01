@@ -51,7 +51,7 @@ final class WorldCloneCommand extends OptionCommand {
         final var full = tryGetArgument(context, "full", Boolean.class).orElse(true);
 
         final var sender = context.getSource().getSender();
-        final var placeholder = Placeholder.parsed("world", world.getName());
+        final var placeholder = Placeholder.parsed("world", world.key().asString());
 
         plugin.bundle().sendMessage(sender, "world.clone", placeholder);
         plugin.levelView().cloneAsync(world, builder -> {

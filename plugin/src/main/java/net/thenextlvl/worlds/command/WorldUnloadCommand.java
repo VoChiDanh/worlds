@@ -59,7 +59,7 @@ final class WorldUnloadCommand extends SimpleCommand {
                 : plugin.levelView().getOverworld().getSpawnLocation();
 
         plugin.bundle().sendMessage(context.getSource().getSender(), "world.unload",
-                Placeholder.parsed("world", world.getName()));
+                Placeholder.parsed("world", world.key().asString()));
 
         CompletableFuture.allOf(world.getPlayers().stream()
                 .map(player -> player.teleportAsync(fallbackSpawn, COMMAND).thenAccept(success -> {
@@ -72,7 +72,7 @@ final class WorldUnloadCommand extends SimpleCommand {
         }).thenAccept(success -> {
             final var message = success ? "world.unload.success" : "world.unload.failed";
             plugin.bundle().sendMessage(context.getSource().getSender(), message,
-                    Placeholder.parsed("world", world.getName()));
+                    Placeholder.parsed("world", world.key().asString()));
         });
         return Command.SINGLE_SUCCESS;
     }

@@ -50,7 +50,7 @@ final class WorldDeleteCommand extends SimpleCommand {
         final var world = context.getArgument("world", World.class);
         final var schedule = flags.contains("--schedule");
         if (!schedule) plugin.bundle().sendMessage(context.getSource().getSender(), "world.delete",
-                Placeholder.parsed("world", world.getName()));
+                Placeholder.parsed("world", world.key().asString()));
         plugin.delete(world, schedule).thenAccept(result -> {
             final var message = switch (result.status()) {
                 case SUCCESS -> "world.delete.success";
@@ -60,7 +60,7 @@ final class WorldDeleteCommand extends SimpleCommand {
                 case FAILED -> "world.delete.failed";
             };
             plugin.bundle().sendMessage(context.getSource().getSender(), message,
-                    Placeholder.parsed("world", world.getName()));
+                    Placeholder.parsed("world", world.key().asString()));
         });
         return SINGLE_SUCCESS;
     }

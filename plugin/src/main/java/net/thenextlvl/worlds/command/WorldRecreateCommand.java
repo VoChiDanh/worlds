@@ -82,7 +82,7 @@ final class WorldRecreateCommand extends OptionCommand {
 
         final var level = builder.name(name).build();
 
-        final var placeholder = Placeholder.parsed("world", world.getName());
+        final var placeholder = Placeholder.parsed("world", world.key().asString());
 
         plugin.bundle().sendMessage(sender, "world.recreate", placeholder);
         level.create().thenAccept(recreated -> {
