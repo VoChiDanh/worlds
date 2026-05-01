@@ -57,17 +57,16 @@ final class WorldImportCommand extends OptionCommand {
     public int run(final CommandContext<CommandSourceStack> context) {
         final var sender = context.getSource().getSender();
         final var key = context.getArgument("key", Key.class);
-        final var path = plugin.resolveLevelDirectory(key);
 
         final var preset = tryGetArgument(context, "preset", Preset.class).orElse(null);
         final var dimension = tryGetArgument(context, "dimension", Dimension.class).orElse(null);
         final var displayName = tryGetArgument(context, "name", String.class).orElse(null);
         final var generator = tryGetArgument(context, "generator", Generator.class).orElse(null);
 
-        final var name = displayName != null ? displayName : path.getFileName().toString();
+        final var name = displayName != null ? displayName : key.asString();
 
         // if (plugin.getWorldRegistry().isRegistered(key)) return 0; // todo: deny importing worlds that have already been imported
-        
+
         plugin.bundle().sendMessage(sender, "world.import", Placeholder.parsed("world", name));
 
         final var build = Level.builder(key)
@@ -86,9 +85,7 @@ final class WorldImportCommand extends OptionCommand {
             if (!(sender instanceof final Entity entity)) return;
             entity.teleportAsync(level.getSpawnLocation(), COMMAND);
         }).exceptionally(throwable -> {
-            plugin.bundle().sendMessage(sender, "world.import.failed", Placeholder.parsed("world", name));
-            final var t = throwable.getCause() != null ? throwable.getCause() : throwable;
-            plugin.getComponentLogger().warn("Failed to import world {}", name, t);
+            CommandFailureHandler.handle(plugin, sender, throwable, Placeholder.parsed("world", name));
             return null;
         });
 

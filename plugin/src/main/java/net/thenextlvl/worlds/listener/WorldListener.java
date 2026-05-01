@@ -1,5 +1,6 @@
 package net.thenextlvl.worlds.listener;
 
+import net.kyori.adventure.key.Key;
 import net.thenextlvl.worlds.Level;
 import net.thenextlvl.worlds.WorldsPlugin;
 import org.bukkit.World;
@@ -10,7 +11,7 @@ import org.bukkit.event.world.WorldLoadEvent;
 import org.bukkit.permissions.Permission;
 import org.bukkit.permissions.PermissionDefault;
 
-import java.nio.file.Path;
+import java.util.Map;
 
 public final class WorldListener implements Listener {
     private final WorldsPlugin plugin;
@@ -23,7 +24,9 @@ public final class WorldListener implements Listener {
     public void onOverworldLoad(final WorldLoadEvent event) {
         registerEntryPermission(event.getWorld());
         if (!plugin.levelView().isOverworld(event.getWorld())) return;
-        plugin.levelView().listEnabledLevels().stream()
+        plugin.getWorldRegistry().entrySet()
+                .filter(entry -> entry.getValue().enabled())
+                .map(Map.Entry::getKey)
                 .filter(plugin.levelView()::canLoad)
                 .forEach(this::loadLevel);
     }
@@ -39,8 +42,8 @@ public final class WorldListener implements Listener {
         ));
     }
 
-    private void loadLevel(final Path path) {
-        final var level = plugin.levelView().read(path).map(Level.Builder::build).orElse(null);
+    private void loadLevel(final Key key) {
+        final var level = plugin.levelView().read(key).map(Level.Builder::build).orElse(null);
         if (level == null) return;
 
         if (plugin.getServer().getWorld(level.key()) != null) {
@@ -62,7 +65,7 @@ public final class WorldListener implements Listener {
                 plugin.getComponentLogger().error("Failed to start the minecraft server", t);
                 plugin.getServer().shutdown();
             } else {
-                plugin.getComponentLogger().error("An unexpected error occurred while loading the level {}", path.getFileName(), t);
+                plugin.getComponentLogger().error("An unexpected error occurred while loading the level {}", key, t);
                 plugin.getComponentLogger().error("Please report the error above on GitHub: {}", WorldsPlugin.ISSUES);
             }
             return null;

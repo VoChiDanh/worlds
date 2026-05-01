@@ -8,10 +8,12 @@ import io.papermc.paper.command.brigadier.Commands;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.thenextlvl.worlds.Level;
+import net.thenextlvl.worlds.WorldOperationException;
 import net.thenextlvl.worlds.WorldsPlugin;
 import net.thenextlvl.worlds.command.argument.KeyArgument;
 import net.thenextlvl.worlds.command.brigadier.SimpleCommand;
 import net.thenextlvl.worlds.command.suggestion.WorldLoadSuggestionProvider;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Entity;
 import org.jspecify.annotations.NullMarked;
 
@@ -37,17 +39,17 @@ final class WorldLoadCommand extends SimpleCommand {
     public int run(final CommandContext<CommandSourceStack> context) {
         final var sender = context.getSource().getSender();
         final var key = context.getArgument("key", Key.class);
-        final var path = plugin.resolveLevelDirectory(key);
+        final var placeholder = Placeholder.parsed("world", key.asString());
 
-        plugin.bundle().sendMessage(sender, "world.load", Placeholder.parsed("world", key.asString()));
+        plugin.bundle().sendMessage(sender, "world.load", placeholder);
 
         // if (!plugin.getWorldRegistry().isRegistered(key)) return 0; // todo: deny loading worlds that have not been imported
         
-        final var build = plugin.levelView().read(path).map(Level.Builder::build);
+        final var build = plugin.levelView().read(key).map(Level.Builder::build);
         final var future = build.map(Level::create).orElse(null);
 
         if (future == null) {
-            plugin.bundle().sendMessage(sender, "world.load.failed", Placeholder.parsed("world", key.asString()));
+            sendFailure(sender, WorldOperationException.Reason.MISSING_LEVEL_STEM, key);
             return 0;
         }
 
@@ -57,11 +59,18 @@ final class WorldLoadCommand extends SimpleCommand {
             if (!(sender instanceof final Entity entity)) return;
             entity.teleportAsync(level.getSpawnLocation(), COMMAND);
         }).exceptionally(throwable -> {
-            final var t = throwable.getCause() != null ? throwable.getCause() : throwable;
-            plugin.getComponentLogger().warn("Failed to load world {}", path, t);
-            plugin.bundle().sendMessage(sender, "world.load.failed", Placeholder.parsed("world", key.asString()));
+            CommandFailureHandler.handle(plugin, sender, throwable, placeholder);
             return null;
         });
         return SINGLE_SUCCESS;
+    }
+
+    private void sendFailure(
+            final CommandSender sender,
+            final WorldOperationException.Reason reason,
+            final Key key
+    ) {
+        CommandFailureHandler.handle(plugin, sender, new WorldOperationException(reason)
+                .key(key).world(key.asString()));
     }
 }

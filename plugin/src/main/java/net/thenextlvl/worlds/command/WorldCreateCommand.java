@@ -69,15 +69,7 @@ final class WorldCreateCommand extends OptionCommand {
         final var sender = context.getSource().getSender();
         final var level = buildLevel(context, sender);
         if (level == null) return 0;
-
         final var placeholder = Placeholder.parsed("world", level.getName());
-        if (plugin.getServer().getWorld(level.getName()) != null) {
-            plugin.bundle().sendMessage(sender, "world.name.taken", placeholder);
-            return 0;
-        } else if (plugin.getServer().getWorld(level.key()) != null) {
-            plugin.bundle().sendMessage(sender, "world.key.taken", Placeholder.parsed("key", level.key().asString()));
-            return 0;
-        }
 
         plugin.bundle().sendMessage(sender, "world.create", placeholder);
         level.create().thenAccept(world -> {
@@ -86,9 +78,7 @@ final class WorldCreateCommand extends OptionCommand {
             if (!(sender instanceof final Entity entity)) return;
             entity.teleportAsync(world.getSpawnLocation(), COMMAND);
         }).exceptionally(throwable -> {
-            final var t = throwable.getCause() != null ? throwable.getCause() : throwable;
-            plugin.getComponentLogger().warn("Failed to create world {} ({})", level.key(), level.getName(), t);
-            plugin.bundle().sendMessage(sender, "world.create.failed", placeholder);
+            CommandFailureHandler.handle(plugin, sender, throwable, placeholder);
             return null;
         });
         return SINGLE_SUCCESS;
@@ -114,8 +104,7 @@ final class WorldCreateCommand extends OptionCommand {
                     .name(name)
                     .build();
         } catch (final Exception e) {
-            plugin.getComponentLogger().warn("Failed to create world {}", name, e);
-            plugin.bundle().sendMessage(sender, "world.create.failed", Placeholder.parsed("world", name));
+            CommandFailureHandler.handle(plugin, sender, e, Placeholder.parsed("world", name));
             return null;
         }
     }

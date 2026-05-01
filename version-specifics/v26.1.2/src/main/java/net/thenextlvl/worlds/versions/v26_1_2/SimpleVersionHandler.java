@@ -54,6 +54,7 @@ import net.minecraft.world.level.storage.PrimaryLevelData;
 import net.minecraft.world.level.storage.SavedDataStorage;
 import net.thenextlvl.worlds.Dimension;
 import net.thenextlvl.worlds.Level;
+import net.thenextlvl.worlds.WorldOperationException;
 import net.thenextlvl.worlds.experimental.GeneratorType;
 import net.thenextlvl.worlds.preset.Preset;
 import net.thenextlvl.worlds.versions.PluginAccess;
@@ -182,15 +183,24 @@ public final class SimpleVersionHandler extends VersionHandler {
 
         try {
             Preconditions.checkState(console.getAllLevels().iterator().hasNext(), "Cannot create worlds before main level is created");
-            Preconditions.checkArgument(!Files.exists(directory) || Files.isDirectory(directory), "File (%s) exists and isn't a folder", directory);
+            if (Files.exists(directory) && !Files.isDirectory(directory)) {
+                return CompletableFuture.failedFuture(new WorldOperationException(
+                        WorldOperationException.Reason.TARGET_PATH_IS_FILE
+                ).path(directory).key(key).world(name));
+            }
 
-            Preconditions.checkArgument(server.getWorld(key) == null, "World with key %s already exists", key);
-            Preconditions.checkArgument(server.getWorld(name) == null, "World with name %s already exists", name);
+            if (server.getWorld(key) != null) return CompletableFuture.failedFuture(new WorldOperationException(
+                    WorldOperationException.Reason.WORLD_KEY_EXISTS
+            ).key(key).world(name));
+            if (server.getWorld(name) != null) return CompletableFuture.failedFuture(new WorldOperationException(
+                    WorldOperationException.Reason.WORLD_NAME_EXISTS
+            ).key(key).world(name));
 
-            Preconditions.checkState(plugin.getServer().getWorlds().stream()
+            if (plugin.getServer().getWorlds().stream()
                             .map(World::getWorldPath)
-                            .noneMatch(directory::equals),
-                    "World with directory %s already exists", directory);
+                            .anyMatch(directory::equals)) return CompletableFuture.failedFuture(new WorldOperationException(
+                    WorldOperationException.Reason.WORLD_DIRECTORY_LOADED
+            ).key(key).path(directory).world(name));
         } catch (final RuntimeException e) {
             return CompletableFuture.failedFuture(e);
         }
@@ -225,7 +235,9 @@ public final class SimpleVersionHandler extends VersionHandler {
         Registry<LevelStem> contextLevelStemRegistry = registryAccess.lookupOrThrow(Registries.LEVEL_STEM);
         final LevelStem configuredStem = console.registryAccess().lookupOrThrow(Registries.LEVEL_STEM).getValue(actualDimension);
         if (configuredStem == null) {
-            return CompletableFuture.failedFuture(new IllegalStateException("Missing configured level stem " + actualDimension)); // Worlds - complete exceptionally
+            return CompletableFuture.failedFuture(new WorldOperationException(
+                    WorldOperationException.Reason.MISSING_LEVEL_STEM
+            ).key(key).world(name)); // Worlds - complete exceptionally
         }
         try {
             WorldFolderMigration.migrateApiWorld(
@@ -236,7 +248,10 @@ public final class SimpleVersionHandler extends VersionHandler {
                     dimensionKey
             );
         } catch (final IOException ex) {
-            return CompletableFuture.failedFuture(new RuntimeException("Failed to migrate legacy world " + name, ex)); // Worlds - complete exceptionally
+            return CompletableFuture.failedFuture(new WorldOperationException(
+                    WorldOperationException.Reason.LEGACY_MIGRATION_FAILED,
+                    ex
+            ).key(key).world(name)); // Worlds - complete exceptionally
         }
         PaperWorldLoader.LoadedWorldData loadedWorldData = PaperWorldLoader.loadWorldData(
                 console,
@@ -265,7 +280,9 @@ public final class SimpleVersionHandler extends VersionHandler {
 
             final WorldDimensions.Complete complete = worldDimensions.bake(contextLevelStemRegistry);
             if (complete.dimensions().getValue(actualDimension) == null) {
-                return CompletableFuture.failedFuture(new IllegalStateException("Missing generated level stem " + actualDimension + " for world " + key)); // Worlds - complete exceptionally
+                return CompletableFuture.failedFuture(new WorldOperationException(
+                        WorldOperationException.Reason.MISSING_LEVEL_STEM
+                ).key(key).world(name)); // Worlds - complete exceptionally
             }
 
             worldGenSettings = new WorldGenSettings(worldOptions, worldDimensions);
@@ -282,7 +299,9 @@ public final class SimpleVersionHandler extends VersionHandler {
         // Worlds start - check world uuid availability
         final var duplicate = server.getWorld(loadedWorldData.uuid());
         if (duplicate != null) return CompletableFuture.failedFuture(
-                new IllegalStateException("World %s is a duplicate of %s. Remove or change the duplicated Paper metadata.".formatted(key, duplicate.key()))
+                new WorldOperationException(
+                        WorldOperationException.Reason.DUPLICATE_METADATA_UUID
+                ).key(key).world(name)
         );
         // Worlds end
 
@@ -300,7 +319,9 @@ public final class SimpleVersionHandler extends VersionHandler {
             customStem = contextLevelStemRegistry.getValue(actualDimension);
         }
         if (customStem == null) {
-            return CompletableFuture.failedFuture(new IllegalStateException("Missing level stem for world " + key + " using key " + actualDimension)); // Worlds - complete exceptionally
+            return CompletableFuture.failedFuture(new WorldOperationException(
+                    WorldOperationException.Reason.MISSING_LEVEL_STEM
+            ).key(key).world(name)); // Worlds - complete exceptionally
         }
 
         final var environment = toEnvironment(level.getDimension()); // Worlds - get environment from dimension
@@ -337,7 +358,9 @@ public final class SimpleVersionHandler extends VersionHandler {
 
         // Worlds start - ensure world is memoized before adding to server
         if (server.getWorld(name) == null) return CompletableFuture.failedFuture(
-                new IllegalStateException("World " + key + " was not properly memoized")
+                new WorldOperationException(
+                        WorldOperationException.Reason.MEMOIZATION_FAILED
+                ).key(key).world(name)
         );
         // Worlds end
 

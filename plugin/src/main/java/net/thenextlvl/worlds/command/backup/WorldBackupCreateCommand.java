@@ -9,6 +9,7 @@ import io.papermc.paper.command.brigadier.Commands;
 import net.kyori.adventure.text.minimessage.tag.resolver.Formatter;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.thenextlvl.worlds.WorldsPlugin;
+import net.thenextlvl.worlds.command.CommandFailureHandler;
 import net.thenextlvl.worlds.command.brigadier.BrigadierCommand;
 import org.bukkit.World;
 import org.jspecify.annotations.NullMarked;
@@ -54,8 +55,8 @@ final class WorldBackupCreateCommand extends BrigadierCommand {
                     Formatter.number("size", gb >= 1 ? gb : mb >= 1 ? mb : kb >= 1 ? kb : bytes),
                     Formatter.choice("unit", gb >= 1 ? 0 : mb >= 1 ? 1 : kb >= 1 ? 2 : 3));
         }).exceptionally(throwable -> {
-            plugin.getComponentLogger().warn("Failed to backup world {}", world.getName(), throwable);
-            plugin.bundle().sendMessage(sender, "world.backup.failed", placeholder);
+            CommandFailureHandler.handle(plugin, sender, throwable, placeholder,
+                    Placeholder.parsed("backup", name != null ? name : ""));
             return null;
         });
         return Command.SINGLE_SUCCESS;

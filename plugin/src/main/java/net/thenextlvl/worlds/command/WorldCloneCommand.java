@@ -61,8 +61,7 @@ final class WorldCloneCommand extends OptionCommand {
             if (sender instanceof final Player player) player.teleportAsync(clone.getSpawnLocation(), COMMAND);
             plugin.bundle().sendMessage(sender, "world.clone.success", placeholder);
         }).exceptionally(throwable -> {
-            plugin.getComponentLogger().warn("Failed to clone world {}", world.getName(), throwable);
-            plugin.bundle().sendMessage(sender, "world.clone.failed", placeholder);
+            CommandFailureHandler.handle(plugin, sender, throwable, placeholder);
             return null;
         });
         return SINGLE_SUCCESS;

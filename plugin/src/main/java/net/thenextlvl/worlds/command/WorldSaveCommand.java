@@ -41,8 +41,7 @@ final class WorldSaveCommand extends BrigadierCommand {
         plugin.levelView().saveAsync(world, flush).thenAccept(ignored -> {
             plugin.bundle().sendMessage(context.getSource().getSender(), "world.save.success", placeholder);
         }).exceptionally(throwable -> {
-            plugin.bundle().sendMessage(context.getSource().getSender(), "world.save.failed", placeholder);
-            plugin.getComponentLogger().warn("Failed to save world {}", world.getName(), throwable);
+            CommandFailureHandler.handle(plugin, context.getSource().getSender(), throwable, placeholder);
             return null;
         });
         return Command.SINGLE_SUCCESS;

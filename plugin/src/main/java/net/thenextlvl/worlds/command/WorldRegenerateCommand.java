@@ -65,10 +65,7 @@ final class WorldRegenerateCommand extends SimpleCommand {
             plugin.bundle().sendMessage(context.getSource().getSender(), message,
                     Placeholder.parsed("world", world.getName()));
         }).exceptionally(throwable -> {
-            final var t = throwable.getCause() != null ? throwable.getCause() : throwable;
-            plugin.bundle().sendMessage(context.getSource().getSender(), "world.regenerate.failed",
-                    Placeholder.parsed("world", world.getName()));
-            plugin.getComponentLogger().warn("Failed to regenerate world {}", world.getName(), t);
+            CommandFailureHandler.handle(plugin, context.getSource().getSender(), throwable, Placeholder.parsed("world", world.getName()));
             return null;
         });
         return SINGLE_SUCCESS;

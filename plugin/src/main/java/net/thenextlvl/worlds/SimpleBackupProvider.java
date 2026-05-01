@@ -40,29 +40,31 @@ public class SimpleBackupProvider implements BackupProvider {
 
     @Override
     public CompletableFuture<ActionResult<World>> restore(final World world, final Backup backup) {
-        final var worldFolder = world.getWorldPath();
+        final var worldKey = world.key();
         return WorldsAccess.access().unload(world, false).thenComposeAsync(success -> {
             if (!success) return CompletableFuture.completedFuture(
                     ActionResult.result(null, ActionResult.Status.FAILED)
             );
-            final var status = restoreNow(worldFolder, backup);
+            final var status = restoreNow(worldKey, backup);
             if (status != ActionResult.Status.SUCCESS) {
                 return CompletableFuture.completedFuture(ActionResult.result(null, status));
             }
-            return WorldsAccess.access().load(world.getWorldPath());
+            return WorldsAccess.access().load(worldKey);
         });
     }
 
     @Override
-    public ActionResult.Status restoreNow(final Path path, final Backup backup) {
+    public ActionResult.Status restoreNow(final Key key, final Backup backup) {
         if (!(backup instanceof final FileBackup fileBackup))
             throw new IllegalStateException("Tried to restore backup from different provider");
         try {
-            restoreBackup(path, fileBackup.path());
+            restoreBackup(key, fileBackup.path());
             return ActionResult.Status.SUCCESS;
         } catch (final IOException e) {
-            WorldsAccess.access().getComponentLogger().warn("Failed to restore backup for world {}", backup.key().asString(), e);
-            return ActionResult.Status.FAILED;
+            throw new WorldOperationException(
+                    WorldOperationException.Reason.BACKUP_RESTORE_FAILED,
+                    e
+            ).key(backup.key()).backup(backup.name());
         }
     }
 
@@ -135,13 +137,18 @@ public class SimpleBackupProvider implements BackupProvider {
         try {
             Files.createDirectories(folder);
         } catch (final IOException e) {
-            throw new RuntimeException("Failed to create backup directory " + folder, e);
+            throw new WorldOperationException(
+                    WorldOperationException.Reason.BACKUP_DIRECTORY_FAILED,
+                    e
+            ).key(world.key()).world(world.getName()).path(folder);
         }
         final var timestamp = FORMATTER.format(Instant.now());
         final var fileName = name != null ? name + ".zip" : findAvailableName(folder, timestamp);
         final var backupPath = folder.resolve(fileName);
         if (name != null && Files.isRegularFile(backupPath)) {
-            throw new RuntimeException("A backup named " + name + " already exists for " + world.key());
+            throw new WorldOperationException(
+                    WorldOperationException.Reason.BACKUP_NAME_EXISTS
+            ).key(world.key()).world(world.getName()).backup(name).path(backupPath);
         }
         try (final var output = new ZipOutputStream(new BufferedOutputStream(Files.newOutputStream(
                 backupPath, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE
@@ -159,7 +166,10 @@ public class SimpleBackupProvider implements BackupProvider {
                 }
             });
         } catch (final IOException e) {
-            throw new RuntimeException("Failed to create backup for " + world.key().asString(), e);
+            throw new WorldOperationException(
+                    WorldOperationException.Reason.BACKUP_ZIP_FAILED,
+                    e
+            ).key(world.key()).world(world.getName()).backup(name != null ? name : fileName.substring(0, fileName.length() - 4)).path(backupPath);
         }
         try {
             final var attrs = Files.readAttributes(backupPath, BasicFileAttributes.class);
@@ -172,11 +182,15 @@ public class SimpleBackupProvider implements BackupProvider {
                     world.key()
             );
         } catch (final IOException e) {
-            throw new RuntimeException("Failed to read backup attributes for " + backupPath, e);
+            throw new WorldOperationException(
+                    WorldOperationException.Reason.BACKUP_READ_FAILED,
+                    e
+            ).key(world.key()).world(world.getName()).path(backupPath);
         }
     }
 
-    private void restoreBackup(final Path worldDirectory, final Path backupFile) throws IOException {
+    private void restoreBackup(final Key key, final Path backupFile) throws IOException {
+        final var worldDirectory = WorldsAccess.access().resolveLevelDirectory(key);
         Path tempPath;
         do {
             tempPath = worldDirectory.resolveSibling("." + UUID.randomUUID());

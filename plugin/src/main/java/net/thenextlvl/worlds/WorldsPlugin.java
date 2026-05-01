@@ -143,7 +143,7 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
     }
 
     public Level.Builder levelBuilder(final World world) {
-        return levelView().read(world.getWorldPath())
+        return levelView().read(world.key())
                 .orElseGet(() -> Level.builder(world.key()))
                 .bonusChest(handler().hasBonusChest(world))
                 .hardcore(world.isHardcore())
@@ -287,13 +287,8 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
     }
 
     @Override
-    public Optional<Level.Builder> read(final Path directory) {
-        return levelView.read(directory);
-    }
-
-    @Override
-    public CompletableFuture<ActionResult<World>> load(final Path directory) {
-        return read(directory)
+    public CompletableFuture<ActionResult<World>> load(final Key key) {
+        return levelView.read(key)
                 .map(Level.Builder::build)
                 .map(level -> level.create().thenApply(world -> {
                     worldRegistry.register(level, true);

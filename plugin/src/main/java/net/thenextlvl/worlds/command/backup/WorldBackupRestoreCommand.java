@@ -8,6 +8,7 @@ import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.thenextlvl.worlds.WorldsPlugin;
+import net.thenextlvl.worlds.command.CommandFailureHandler;
 import net.thenextlvl.worlds.command.argument.CommandFlagsArgument;
 import net.thenextlvl.worlds.command.brigadier.SimpleCommand;
 import net.thenextlvl.worlds.command.suggestion.BackupSuggestionProvider;
@@ -86,10 +87,9 @@ final class WorldBackupRestoreCommand extends SimpleCommand {
                         Placeholder.parsed("world", result.result().map(World::getName).orElse(world.getName())),
                         Placeholder.parsed("identifier", backup.name()));
             }).exceptionally(throwable -> {
-                plugin.bundle().sendMessage(context.getSource().getSender(), "world.backup.restore.failed",
-                        Placeholder.parsed("world", world.getName()),
-                        Placeholder.parsed("identifier", backup.name()));
-                plugin.getComponentLogger().warn("Failed to restore backup of world {} from {}", world.getName(), backup.name(), throwable);
+                CommandFailureHandler.handle(plugin, context.getSource().getSender(), throwable, Placeholder.parsed("world", world.getName()),
+                        Placeholder.parsed("identifier", backup.name()),
+                        Placeholder.parsed("backup", backup.name()));
                 return null;
             });
         });

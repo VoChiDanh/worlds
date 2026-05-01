@@ -89,9 +89,7 @@ final class WorldRecreateCommand extends OptionCommand {
             if (!(sender instanceof final Entity entity)) return;
             entity.teleportAsync(recreated.getSpawnLocation(), COMMAND);
         }).exceptionally(throwable -> {
-            final var t = throwable.getCause() != null ? throwable.getCause() : throwable;
-            plugin.getComponentLogger().warn("Failed to recreate world {}", world.getName(), t);
-            plugin.bundle().sendMessage(sender, "world.recreate.failed", placeholder);
+            CommandFailureHandler.handle(plugin, sender, throwable, placeholder);
             return null;
         });
         return SINGLE_SUCCESS;
