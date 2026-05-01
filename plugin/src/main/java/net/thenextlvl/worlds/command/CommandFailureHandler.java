@@ -8,10 +8,7 @@ import net.thenextlvl.worlds.WorldsPlugin;
 import net.thenextlvl.worlds.generator.GeneratorException;
 import org.bukkit.command.CommandSender;
 
-import java.io.IOException;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Optional;
 import java.util.concurrent.CompletionException;
 
@@ -34,12 +31,9 @@ public final class CommandFailureHandler {
             final TagResolver... placeholders
     ) {
         final var cause = unwrap(throwable);
-        final var messageKey = messageKey(plugin, cause);
-        if (messageKey.isPresent()) {
-            plugin.bundle().sendMessage(sender, messageKey.orElseThrow(), merge(cause, placeholders));
-        } else {
-            plugin.getComponentLogger().error("Unhandled command failure", cause);
-        }
+        messageKey(plugin, cause).ifPresentOrElse(messageKey -> {
+            plugin.bundle().sendMessage(sender, messageKey, merge(cause, placeholders));
+        }, () -> plugin.getComponentLogger().error("Unhandled command failure", cause));
     }
 
     public static Optional<String> messageKey(final WorldsPlugin plugin, final Throwable throwable) {
@@ -55,22 +49,28 @@ public final class CommandFailureHandler {
             };
         }
         if (plugin.handler().isDirectoryLockException(throwable)) return Optional.of("world.failure.directory-loaded");
-        if (throwable instanceof IOException) return Optional.of("world.failure.filesystem");
         return Optional.empty();
     }
 
-    private static TagResolver[] merge(final Throwable throwable, final TagResolver... placeholders) {
+    private static TagResolver merge(final Throwable throwable, final TagResolver... placeholders) {
         final var exception = Optional.ofNullable(throwable instanceof final WorldOperationException operation ? operation : null);
         final var generator = Optional.ofNullable(throwable instanceof final GeneratorException gen ? gen : null);
-        final var merged = new ArrayList<TagResolver>(placeholders.length + 6);
-        merged.addAll(Arrays.asList(placeholders));
-        merged.add(Placeholder.parsed("key", exception.map(WorldOperationException::key).map(Key::asString).orElse("")));
-        merged.add(Placeholder.parsed("path", exception.map(WorldOperationException::path).map(Path::toString).orElse("")));
-        merged.add(Placeholder.parsed("backup", exception.map(WorldOperationException::backup).orElse("")));
-        merged.add(Placeholder.parsed("world", exception.map(WorldOperationException::world).orElse("")));
-        merged.add(Placeholder.parsed("plugin", exception.map(WorldOperationException::plugin)
-                .or(() -> generator.map(GeneratorException::getPlugin)).orElse("")));
-        merged.add(Placeholder.parsed("reason", Optional.ofNullable(throwable.getMessage()).orElse("")));
-        return merged.toArray(TagResolver[]::new);
+
+        final var builder = TagResolver.builder();
+        builder.resolvers(placeholders);
+
+        exception.map(WorldOperationException::key).map(Key::asString)
+                .ifPresent(key -> builder.resolver(Placeholder.parsed("key", key)));
+        exception.map(WorldOperationException::path).map(Path::toString)
+                .ifPresent(path -> builder.resolver(Placeholder.parsed("path", path)));
+        exception.map(WorldOperationException::backup)
+                .ifPresent(backup -> builder.resolver(Placeholder.parsed("backup", backup)));
+        exception.map(WorldOperationException::world)
+                .ifPresent(world -> builder.resolver(Placeholder.parsed("world", world)));
+        exception.map(WorldOperationException::plugin).or(() -> generator.map(GeneratorException::getPlugin))
+                .ifPresent(plugin -> builder.resolver(Placeholder.parsed("plugin", plugin)));
+        Optional.ofNullable(throwable.getMessage())
+                .ifPresent(reason -> builder.resolver(Placeholder.parsed("reason", reason)));
+        return builder.build();
     }
 }

@@ -63,7 +63,7 @@ public class SimpleBackupProvider implements BackupProvider {
             throw new WorldOperationException(
                     WorldOperationException.Reason.BACKUP_RESTORE_FAILED,
                     e
-            ).key(backup.key()).backup(backup.name());
+            ).key(key).world(key.asString()).backup(backup.name());
         }
     }
 

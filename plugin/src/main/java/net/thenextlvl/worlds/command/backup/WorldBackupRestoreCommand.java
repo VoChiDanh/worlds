@@ -83,15 +83,13 @@ final class WorldBackupRestoreCommand extends SimpleCommand {
                     final var message = schedule ? "world.backup.restore.scheduled" : "world.backup.restore.success";
                     plugin.bundle().sendMessage(context.getSource().getSender(), message,
                             Placeholder.parsed("world", world.key().asString()),
-                            Placeholder.parsed("identifier", backup.name()));
+                            Placeholder.parsed("backup", backup.name()));
                 } else CommandFailureHandler.handle(plugin, context.getSource().getSender(), new WorldOperationException(
                         WorldOperationException.Reason.EVENT_CANCELLED
                 ).world(world.key().asString()).key(world.key()).backup(backup.name()), Placeholder.parsed("world", world.key().asString()),
-                        Placeholder.parsed("identifier", backup.name()),
                         Placeholder.parsed("backup", backup.name()));
             }).exceptionally(throwable -> {
                 CommandFailureHandler.handle(plugin, context.getSource().getSender(), throwable, Placeholder.parsed("world", world.key().asString()),
-                        Placeholder.parsed("identifier", backup.name()),
                         Placeholder.parsed("backup", backup.name()));
                 return null;
             });

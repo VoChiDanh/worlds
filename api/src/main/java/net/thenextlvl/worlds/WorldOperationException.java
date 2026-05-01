@@ -102,7 +102,7 @@ public final class WorldOperationException extends RuntimeException {
         BACKUP_WRITE_FAILED("world.failure.backup-write"),
         BACKUP_READ_FAILED("world.failure.backup-read"),
         BACKUP_ZIP_FAILED("world.failure.backup-write"),
-        BACKUP_RESTORE_FAILED("world.failure.backup-restore"),
+        BACKUP_RESTORE_FAILED("world.backup.restore.failed"),
         SAVE_FAILED("world.failure.save"),
         EVENT_CANCELLED("world.failure.cancelled"),
         WORLD_NOT_FOUND("world.failure.not-found"),

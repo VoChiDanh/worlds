@@ -186,10 +186,10 @@ public final class SimpleVersionHandler extends VersionHandler {
 
             if (server.getWorld(key) != null) return CompletableFuture.failedFuture(new WorldOperationException(
                     WorldOperationException.Reason.WORLD_KEY_EXISTS
-            ).key(key).world(name));
+            ).key(key));
             if (server.getWorld(name) != null) return CompletableFuture.failedFuture(new WorldOperationException(
                     WorldOperationException.Reason.WORLD_NAME_EXISTS
-            ).key(key).world(name));
+            ).world(name));
 
             if (plugin.getServer().getWorlds().stream().map(World::getWorldPath).anyMatch(directory::equals))
                 return CompletableFuture.failedFuture(new WorldOperationException(

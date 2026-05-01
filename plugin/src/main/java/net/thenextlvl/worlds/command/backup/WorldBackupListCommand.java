@@ -106,7 +106,7 @@ final class WorldBackupListCommand extends SimpleCommand {
             return plugin.bundle().component("world.backup.list.entry", sender, resolvers(last))
                     .hoverEvent(HoverEvent.showText(plugin.bundle().component("world.backup.list.hover", sender,
                             Placeholder.parsed("world", world),
-                            Placeholder.parsed("identifier", backup.name()))))
+                            Placeholder.parsed("backup", backup.name()))))
                     .clickEvent(ClickEvent.suggestCommand("/world backup restore " + world + " " + backup.name()));
         }
 
@@ -126,7 +126,7 @@ final class WorldBackupListCommand extends SimpleCommand {
 
             return new TagResolver[]{
                     Placeholder.parsed("tree", last ? "└" : "├"),
-                    Placeholder.parsed("identifier", backup.name()),
+                    Placeholder.parsed("backup", backup.name()),
                     Formatter.number("size", gb >= 1 ? gb : mb >= 1 ? mb : kb >= 1 ? kb : bytes),
                     Formatter.choice("unit", gb >= 1 ? 0 : mb >= 1 ? 1 : kb >= 1 ? 2 : 3),
                     Formatter.number("time", years >= 1 ? years : months >= 1 ? months : weeks >= 1 ? weeks : days >= 1 ? days : hours >= 1 ? hours : minutes >= 1 ? minutes : seconds),

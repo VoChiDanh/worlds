@@ -277,15 +277,15 @@ public class PaperLevelView {
         try {
             if (plugin.getServer().getWorld(clone.key()) != null) throw new WorldOperationException(
                     WorldOperationException.Reason.WORLD_KEY_EXISTS
-            ).key(clone.key()).world(clone.getName());
+            ).key(clone.key());
             if (plugin.getServer().getWorld(clone.getName()) != null) throw new WorldOperationException(
                     WorldOperationException.Reason.WORLD_NAME_EXISTS
-            ).key(clone.key()).world(clone.getName());
+            ).world(clone.getName());
             if (Files.exists(clone.getDirectory())) throw new WorldOperationException(
                     Files.isDirectory(clone.getDirectory())
                             ? WorldOperationException.Reason.WORLD_PATH_EXISTS
                             : WorldOperationException.Reason.TARGET_PATH_IS_FILE
-            ).key(clone.key()).world(clone.getName()).path(clone.getDirectory());
+            ).path(clone.getDirectory());
         } catch (final RuntimeException e) {
             return CompletableFuture.failedFuture(e);
         }
