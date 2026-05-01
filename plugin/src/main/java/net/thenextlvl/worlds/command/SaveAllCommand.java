@@ -37,7 +37,7 @@ public final class SaveAllCommand extends BrigadierCommand {
     private int saveAll(final CommandSourceStack source, final boolean flush) {
         plugin.bundle().sendMessage(source.getSender(), "world.save.all");
         CompletableFuture.allOf(plugin.getServer().getWorlds().stream().map(world -> {
-            return plugin.levelView().saveAsync(world, flush).exceptionallyCompose(throwable -> {
+            return plugin.save(world, flush).exceptionallyCompose(throwable -> {
                 final var failed = new WorldOperationException(
                         WorldOperationException.Reason.SAVE_FAILED,
                         throwable

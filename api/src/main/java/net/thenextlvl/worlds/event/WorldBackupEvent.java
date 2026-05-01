@@ -4,7 +4,6 @@ import org.bukkit.World;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.world.WorldEvent;
 import org.jetbrains.annotations.ApiStatus;
-import org.jspecify.annotations.NullMarked;
 
 /**
  * Represents an event triggered when a {@link World} is backed up.

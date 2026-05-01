@@ -28,6 +28,7 @@ import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @NullMarked
 public class PaperLevelView {
@@ -52,6 +53,10 @@ public class PaperLevelView {
 
     public boolean isOverworld(final World world) {
         return world.key().equals(OVERWORLD);
+    }
+
+    public boolean isNether(final World world) {
+        return world.key().equals(NETHER);
     }
 
     public boolean isEnd(final World world) {
@@ -95,14 +100,6 @@ public class PaperLevelView {
         return firstParent != null && firstParent.equals(secondParent);
     }
 
-    public String getEntryPermission(final World world) {
-        return "worlds.enter." + world.key().asString();
-    }
-
-    public Optional<Level.Builder> read(final Key key) {
-        return plugin.getWorldRegistry().get(key).map(entry -> read(key, entry));
-    }
-
     public Level.Builder read(final Key key, final WorldRegistry.Entry entry) {
         return Level.builder(key)
                 .dimension(entry.dimension())
@@ -125,10 +122,9 @@ public class PaperLevelView {
         return Optional.of(Key.key(namespace, value));
     }
 
-    public @Unmodifiable Set<Path> listLevels() {
+    public Stream<Path> listLevels() {
         return plugin.getWorldRegistry().worlds()
-                .map(plugin::resolveLevelDirectory)
-                .collect(Collectors.toUnmodifiableSet());
+                .map(plugin::resolveLevelDirectory);
     }
 
     public @Unmodifiable Set<Path> listLevelFolders() {

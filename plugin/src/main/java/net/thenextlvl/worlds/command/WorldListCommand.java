@@ -21,10 +21,11 @@ import org.jspecify.annotations.Nullable;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @NullMarked
 final class WorldListCommand extends SimpleCommand {
@@ -41,9 +42,6 @@ final class WorldListCommand extends SimpleCommand {
     public int run(final CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         final var sender = context.getSource().getSender();
         final var worlds = plugin.getServer().getWorlds();
-        final var loadedFolders = worlds.stream()
-                .map(World::getWorldPath)
-                .collect(Collectors.toSet());
 
         final var entries = new ArrayList<WorldListEntry>();
         worlds.forEach(world -> entries.add(new WorldListEntry(world.key(), plugin.handler().getDimension(world), State.LOADED)));
@@ -51,8 +49,7 @@ final class WorldListCommand extends SimpleCommand {
                 .filter(entry -> plugin.getServer().getWorld(entry.getKey()) == null)
                 .forEach(entry -> entries.add(new WorldListEntry(entry.getKey(), entry.getValue().dimension(), State.UNLOADED)));
 
-        final var managedFolders = plugin.levelView().listLevels();
-        listUnimported(loadedFolders, managedFolders).stream()
+        listUnimported(worlds.stream().map(World::getWorldPath).toList(), plugin.listLevels().toList())
                 .map(path -> plugin.levelView().key(path).orElse(null))
                 .filter(Objects::nonNull)
                 .forEach(key -> entries.add(new WorldListEntry(key, null, State.UNIMPORTED)));
@@ -76,11 +73,10 @@ final class WorldListCommand extends SimpleCommand {
         return SINGLE_SUCCESS;
     }
 
-    private Set<Path> listUnimported(final Set<Path> loadedFolders, final Set<Path> managedFolders) {
+    private Stream<Path> listUnimported(final List<Path> loadedFolders, final List<Path> managedFolders) {
         return plugin.levelView().listLevelFolders().stream()
                 .filter(path -> !loadedFolders.contains(path))
-                .filter(path -> !managedFolders.contains(path))
-                .collect(Collectors.toSet());
+                .filter(path -> !managedFolders.contains(path));
     }
 
     private long count(final Iterable<WorldListEntry> entries, final State state) {

@@ -107,7 +107,7 @@ public final class WorldOperationException extends RuntimeException {
         EVENT_CANCELLED("world.failure.cancelled"),
         UNLOAD_FAILED("world.unload.failed"),
         INTERNAL_ERROR("world.failure.internal");
-        
+
         private final String translationKey;
 
         Reason(final String key) {

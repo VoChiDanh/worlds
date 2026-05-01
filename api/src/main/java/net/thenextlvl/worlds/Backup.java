@@ -8,7 +8,7 @@ import java.time.Instant;
 public interface Backup extends Keyed {
     @Contract(pure = true)
     BackupProvider provider();
-    
+
     @Contract(pure = true)
     String name();
 

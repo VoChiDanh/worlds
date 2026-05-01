@@ -54,7 +54,7 @@ final class WorldCloneCommand extends OptionCommand {
         final var placeholder = Placeholder.parsed("world", world.key().asString());
 
         plugin.bundle().sendMessage(sender, "world.clone", placeholder);
-        plugin.levelView().cloneAsync(world, builder -> {
+        plugin.clone(world, builder -> {
             tryGetArgument(context, "name", String.class).ifPresent(builder::name);
             tryGetArgument(context, "key", Key.class).ifPresent(builder::key);
         }, full).thenAccept(clone -> {

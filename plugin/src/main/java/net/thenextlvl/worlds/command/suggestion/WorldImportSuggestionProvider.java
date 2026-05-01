@@ -28,7 +28,7 @@ public final class WorldImportSuggestionProvider implements SuggestionProvider<C
             final var loaded = plugin.getServer().getWorlds().stream()
                     .map(World::getWorldPath)
                     .collect(Collectors.toSet());
-            final var managed = plugin.levelView().listLevels();
+            final var managed = plugin.listLevels().toList();
             plugin.levelView().listLevelFolders().stream()
                     .filter(path -> !loaded.contains(path))
                     .filter(path -> !managed.contains(path))

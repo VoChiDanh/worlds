@@ -1,7 +1,8 @@
 package net.thenextlvl.worlds.listener;
 
 import net.kyori.adventure.key.Key;
-import net.thenextlvl.worlds.Level;
+import net.thenextlvl.worlds.Dimension;
+import net.thenextlvl.worlds.WorldRegistry;
 import net.thenextlvl.worlds.WorldsPlugin;
 import org.bukkit.World;
 import org.bukkit.event.EventHandler;
@@ -11,8 +12,6 @@ import org.bukkit.event.world.WorldLoadEvent;
 import org.bukkit.permissions.Permission;
 import org.bukkit.permissions.PermissionDefault;
 
-import java.util.Map;
-
 public final class WorldListener implements Listener {
     private final WorldsPlugin plugin;
 
@@ -21,18 +20,17 @@ public final class WorldListener implements Listener {
     }
 
     @EventHandler(priority = EventPriority.LOWEST)
-    public void onOverworldLoad(final WorldLoadEvent event) {
+    public void onWorldLoad(final WorldLoadEvent event) {
         registerEntryPermission(event.getWorld());
         if (!plugin.levelView().isOverworld(event.getWorld())) return;
         plugin.getWorldRegistry().entrySet()
                 .filter(entry -> entry.getValue().enabled())
-                .map(Map.Entry::getKey)
-                .forEach(this::loadLevel);
+                .forEach(entry -> loadLevel(entry.getKey(), entry.getValue()));
     }
 
     private void registerEntryPermission(final World world) {
         final var manager = plugin.getServer().getPluginManager();
-        final var permission = plugin.levelView().getEntryPermission(world);
+        final var permission = plugin.getEntryPermission(world);
         if (manager.getPermission(permission) != null) return;
         manager.addPermission(new Permission(
                 permission,
@@ -41,9 +39,8 @@ public final class WorldListener implements Listener {
         ));
     }
 
-    private void loadLevel(final Key key) {
-        final var level = plugin.levelView().read(key).map(Level.Builder::build).orElse(null);
-        if (level == null) return;
+    private void loadLevel(final Key key, final WorldRegistry.Entry entry) {
+        final var level = plugin.levelView().read(key, entry).build();
 
         if (plugin.getServer().getWorld(level.key()) != null) {
             plugin.getComponentLogger().warn("Skip loading dimension '{}' because another world with the same key is already loaded", level.key());
