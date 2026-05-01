@@ -279,6 +279,13 @@ public final class SimpleVersionHandler extends VersionHandler {
             );
         }
 
+        // Worlds start - check world uuid availability
+        final var duplicate = server.getWorld(loadedWorldData.uuid());
+        if (duplicate != null) return CompletableFuture.failedFuture(
+                new IllegalStateException("World %s is a duplicate of %s. Remove or change the duplicated Paper metadata.".formatted(key, duplicate.key()))
+        );
+        // Worlds end
+
         final WorldGenSettings genSettingsFinal = worldGenSettings;
 
         contextLevelStemRegistry = registryAccess.lookupOrThrow(Registries.LEVEL_STEM);
