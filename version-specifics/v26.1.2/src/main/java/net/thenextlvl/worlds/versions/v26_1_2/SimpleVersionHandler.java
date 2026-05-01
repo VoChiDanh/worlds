@@ -52,7 +52,7 @@ import net.minecraft.world.level.storage.LevelResource;
 import net.minecraft.world.level.storage.LevelStorageSource;
 import net.minecraft.world.level.storage.PrimaryLevelData;
 import net.minecraft.world.level.storage.SavedDataStorage;
-import net.thenextlvl.worlds.Environment;
+import net.thenextlvl.worlds.Dimension;
 import net.thenextlvl.worlds.Level;
 import net.thenextlvl.worlds.experimental.GeneratorType;
 import net.thenextlvl.worlds.preset.Preset;
@@ -208,14 +208,14 @@ public final class SimpleVersionHandler extends VersionHandler {
         // Worlds end
 
         final ResourceKey<LevelStem> actualDimension;
-        if (level.getEnvironment().equals(Environment.OVERWORLD)) {
+        if (level.getDimension().equals(Dimension.OVERWORLD)) {
             actualDimension = LevelStem.OVERWORLD;
-        } else if (level.getEnvironment().equals(Environment.THE_NETHER)) {
+        } else if (level.getDimension().equals(Dimension.THE_NETHER)) {
             actualDimension = LevelStem.NETHER;
-        } else if (level.getEnvironment().equals(Environment.THE_END)) {
+        } else if (level.getDimension().equals(Dimension.THE_END)) {
             actualDimension = LevelStem.END;
         } else {
-            actualDimension = ResourceKey.create(Registries.LEVEL_STEM, toIdentifier(level.getEnvironment().key()));  // Worlds - allow custom dimensions
+            actualDimension = ResourceKey.create(Registries.LEVEL_STEM, toIdentifier(level.getDimension().key()));  // Worlds - allow custom dimensions
         }
 
         final var resourceKey = ResourceKey.create(Registries.LEVEL_STEM, toIdentifier(key)); // Worlds - create ResourceKey from key
@@ -296,7 +296,7 @@ public final class SimpleVersionHandler extends VersionHandler {
             return CompletableFuture.failedFuture(new IllegalStateException("Missing level stem for world " + name + " using key " + actualDimension)); // Worlds - complete exceptionally
         }
 
-        final var environment = toBukkitEnvironment(level.getEnvironment()); // Worlds - get bukkit environment from actual environment
+        final var environment = toEnvironment(level.getDimension()); // Worlds - get environment from dimension
 
         final WorldInfo worldInfo = new CraftWorldInfo(loadedWorldData.bukkitName(), CraftNamespacedKey.fromMinecraft(dimensionKey.identifier()), genSettingsFinal.options().seed(), primaryLevelData.enabledFeatures(), environment, customStem.type().value(), customStem.generator(), server.getHandle().getServer().registryAccess(), loadedWorldData.uuid());
         if (biomeProvider == null && chunkGenerator != null) {
@@ -318,7 +318,7 @@ public final class SimpleVersionHandler extends VersionHandler {
                 customStem,
                 primaryLevelData.isDebugWorld(),
                 biomeZoomSeed,
-                level.getEnvironment().equals(Environment.OVERWORLD) ? list : ImmutableList.of(),
+                level.getDimension().equals(Dimension.OVERWORLD) ? list : ImmutableList.of(),
                 true,
                 actualDimension,
                 environment,
@@ -358,10 +358,10 @@ public final class SimpleVersionHandler extends VersionHandler {
         return CompletableFuture.completedFuture(serverLevel.getWorld());
     }
 
-    private World.Environment toBukkitEnvironment(final Environment environment) {
-        if (environment.equals(Environment.OVERWORLD)) return World.Environment.NORMAL;
-        if (environment.equals(Environment.THE_END)) return World.Environment.THE_END;
-        if (environment.equals(Environment.THE_NETHER)) return World.Environment.NETHER;
+    private World.Environment toEnvironment(final Dimension dimension) {
+        if (dimension.equals(Dimension.OVERWORLD)) return World.Environment.NORMAL;
+        if (dimension.equals(Dimension.THE_END)) return World.Environment.THE_END;
+        if (dimension.equals(Dimension.THE_NETHER)) return World.Environment.NETHER;
         return World.Environment.CUSTOM;
     }
 
@@ -425,19 +425,19 @@ public final class SimpleVersionHandler extends VersionHandler {
     }
 
     @Override
-    public Stream<Environment> listEnvironments() {
+    public Stream<Dimension> listDimensions() {
         final var console = ((CraftServer) plugin.getServer()).getServer();
         final var registry = console.worldLoaderContext.datapackDimensions().lookupOrThrow(Registries.LEVEL_STEM);
         return registry.keySet().stream()
                 .map(this::fromIdentifier)
-                .map(Environment::of);
+                .map(Dimension::of);
     }
 
     @Override
-    public Environment getEnvironment(final World world) {
+    public Dimension getDimension(final World world) {
         final var handle = ((CraftWorld) world).getHandle();
         final var identifier = handle.getTypeKey().identifier();
-        return Environment.of(fromIdentifier(identifier));
+        return Dimension.of(fromIdentifier(identifier));
     }
 
     @SuppressWarnings("PatternValidation")

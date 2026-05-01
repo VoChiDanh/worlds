@@ -1,6 +1,6 @@
 package net.thenextlvl.worlds.versions;
 
-import net.thenextlvl.worlds.Environment;
+import net.thenextlvl.worlds.Dimension;
 import net.thenextlvl.worlds.Level;
 import net.thenextlvl.worlds.experimental.GeneratorType;
 import org.bukkit.Location;
@@ -60,9 +60,9 @@ public abstract class VersionHandler {
 
     public abstract GeneratorType getGeneratorType(World world);
 
-    public abstract Stream<Environment> listEnvironments();
+    public abstract Stream<Dimension> listDimensions();
 
-    public abstract Environment getEnvironment(World world);
+    public abstract Dimension getDimension(World world);
 
     public Optional<FoliaSupport> foliaSupport() {
         return Optional.ofNullable(foliaSupport);

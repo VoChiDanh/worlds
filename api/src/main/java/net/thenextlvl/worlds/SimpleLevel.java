@@ -21,7 +21,7 @@ final class SimpleLevel implements Level {
     private final Key key;
     private final String name;
 
-    private final Environment environment;
+    private final Dimension dimension;
     private final GeneratorType generatorType;
 
     private final @Nullable BiomeProvider biomeProvider;
@@ -46,7 +46,7 @@ final class SimpleLevel implements Level {
         this.key = builder.key;
         this.name = builder.name().orElseGet(() -> builder.key().value());
 
-        this.environment = builder.environment().orElse(Environment.OVERWORLD);
+        this.dimension = builder.dimension().orElse(Dimension.OVERWORLD);
 
         this.hardcore = builder.hardcore().orElseGet(server::isHardcore);
         this.seed = builder.seed().orElseGet(ThreadLocalRandom.current()::nextLong);
@@ -83,8 +83,8 @@ final class SimpleLevel implements Level {
     }
 
     @Override
-    public Environment getEnvironment() {
-        return environment;
+    public Dimension getDimension() {
+        return dimension;
     }
 
     @Override
@@ -156,7 +156,7 @@ final class SimpleLevel implements Level {
     public Level.Builder toBuilder() {
         return new Builder(key)
                 .bonusChest(bonusChest)
-                .environment(environment)
+                .dimension(dimension)
                 .generator(generator)
                 .generatorType(generatorType)
                 .hardcore(hardcore)
@@ -176,7 +176,7 @@ final class SimpleLevel implements Level {
         private @Nullable Boolean hardcore;
         private @Nullable Boolean resetSpawnPosition;
         private @Nullable Boolean structures;
-        private @Nullable Environment environment;
+        private @Nullable Dimension dimension;
         private @Nullable Generator generator;
         private @Nullable GeneratorType generatorType;
         private @Nullable Long seed;
@@ -202,13 +202,13 @@ final class SimpleLevel implements Level {
         }
 
         @Override
-        public Optional<Environment> environment() {
-            return Optional.ofNullable(environment);
+        public Optional<Dimension> dimension() {
+            return Optional.ofNullable(dimension);
         }
 
         @Override
-        public Level.Builder environment(final @Nullable Environment environment) {
-            this.environment = environment;
+        public Level.Builder dimension(final @Nullable Dimension dimension) {
+            this.dimension = dimension;
             return this;
         }
 

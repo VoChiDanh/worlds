@@ -26,8 +26,13 @@ public interface WorldsAccess extends Plugin {
 
     Optional<World> getTarget(World world, PortalType type);
 
-    // todo end
-    
+    @Contract(pure = true)
+    Stream<Dimension> listDimensions();
+
+    @Contract(pure = true)
+    Dimension getDimension(World world);
+
+    @Contract(pure = true)
     Path getWorldContainer();
 
     @Contract(pure = true)

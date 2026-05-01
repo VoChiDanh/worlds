@@ -25,7 +25,7 @@ public sealed interface Level extends Keyed permits SimpleLevel {
     String getName();
 
     @Contract(pure = true)
-    Environment getEnvironment();
+    Dimension getDimension();
 
     @Contract(pure = true)
     long getSeed();
@@ -86,10 +86,10 @@ public sealed interface Level extends Keyed permits SimpleLevel {
         Builder name(@Nullable String name);
 
         @Contract(pure = true)
-        Optional<Environment> environment();
+        Optional<Dimension> dimension();
 
         @Contract(mutates = "this")
-        Builder environment(@Nullable Environment environment);
+        Builder dimension(@Nullable Dimension dimension);
 
         @Contract(pure = true)
         OptionalLong seed();

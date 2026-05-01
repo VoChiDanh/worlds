@@ -30,7 +30,7 @@ public interface WorldRegistry {
     boolean isRegistered(final Key key);
 
     @Contract(mutates = "this,io")
-    void register(final Key key, final Environment environment, final boolean enabled, @Nullable final Generator generator);
+    void register(final Key key, final Dimension dimension, final boolean enabled, @Nullable final Generator generator);
 
     @Contract(mutates = "this,io")
     void register(final Level level, final boolean enabled);
@@ -41,9 +41,9 @@ public interface WorldRegistry {
     @Contract(mutates = "this,io")
     void unregister(final Key key);
 
-    record Entry(Environment environment, boolean enabled, @Nullable Generator generator) {
+    record Entry(Dimension dimension, boolean enabled, @Nullable Generator generator) {
         public Entry withEnabled(final boolean enabled) {
-            return new Entry(environment, enabled, generator);
+            return new Entry(dimension, enabled, generator);
         }
     }
 }

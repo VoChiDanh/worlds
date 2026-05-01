@@ -173,12 +173,7 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess {
                 .biomeProvider(world.getBiomeProvider())
                 .chunkGenerator(world.getGenerator())
                 .key(world.key())
-                .levelStem(switch (world.getEnvironment()) {
-                    case NORMAL -> LevelStem.OVERWORLD;
-                    case NETHER -> LevelStem.NETHER;
-                    case THE_END -> LevelStem.END;
-                    default -> null;
-                })
+                .dimension(handler().getDimension(world))
                 .seed(world.getSeed())
                 .name(world.getName());
     }

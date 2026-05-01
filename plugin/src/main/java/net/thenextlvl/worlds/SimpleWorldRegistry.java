@@ -60,14 +60,14 @@ public final class SimpleWorldRegistry implements WorldRegistry {
     }
 
     @Override
-    public void register(final Key key, final Environment environment, final boolean enabled, @Nullable final Generator generator) {
-        entries.put(key, new Entry(environment, enabled, generator));
+    public void register(final Key key, final Dimension dimension, final boolean enabled, @Nullable final Generator generator) {
+        entries.put(key, new Entry(dimension, enabled, generator));
         save();
     }
 
     @Override
     public void register(final Level level, final boolean enabled) {
-        register(level.key(), level.getEnvironment(), enabled, level.getGenerator().orElse(null));
+        register(level.key(), level.getDimension(), enabled, level.getGenerator().orElse(null));
     }
 
     @Override
@@ -90,9 +90,9 @@ public final class SimpleWorldRegistry implements WorldRegistry {
             root.forEach((key, tag) -> {
                 final var object = tag.getAsCompound();
                 final var enabled = object.optional("enabled").map(Tag::getAsBoolean).orElse(false);
-                final var environment = object.optional("environment").map(Tag::getAsString).map(this::fromString).orElse(Environment.OVERWORLD);
+                final var dimension = object.optional("dimension").map(Tag::getAsString).map(this::fromString).orElse(Dimension.OVERWORLD);
                 final var generator = object.optional("generator").map(Tag::getAsString).map(Generator::fromString).orElse(null);
-                entries.put(Key.key(key), new Entry(environment, enabled, generator));
+                entries.put(Key.key(key), new Entry(dimension, enabled, generator));
             });
         } catch (final Exception e) {
             plugin.getComponentLogger().warn("Failed to read managed worlds from {}", path, e);
@@ -105,7 +105,7 @@ public final class SimpleWorldRegistry implements WorldRegistry {
             entries.forEach((key, entry) -> {
                 final var compound = CompoundTag.builder()
                         .put("enabled", entry.enabled())
-                        .put("environment", entry.environment().key().asString());
+                        .put("dimension", entry.dimension().key().asString());
                 if (entry.generator() != null) {
                     compound.put("generator", entry.generator().asString());
                 }
@@ -119,7 +119,7 @@ public final class SimpleWorldRegistry implements WorldRegistry {
     }
 
     @SuppressWarnings("PatternValidation")
-    private Environment fromString(final String string) {
-        return Environment.of(Key.key(string));
+    private Dimension fromString(final String string) {
+        return Dimension.of(Key.key(string));
     }
 }

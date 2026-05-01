@@ -2,5 +2,5 @@ package net.thenextlvl.worlds;
 
 import net.kyori.adventure.key.Key;
 
-record SimpleEnvironment(Key key) implements Environment {
+record SimpleDimension(Key key) implements Dimension {
 }
