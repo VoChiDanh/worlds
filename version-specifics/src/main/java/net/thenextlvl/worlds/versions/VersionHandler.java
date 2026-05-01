@@ -2,10 +2,8 @@ package net.thenextlvl.worlds.versions;
 
 import net.thenextlvl.worlds.Environment;
 import net.thenextlvl.worlds.Level;
-import net.thenextlvl.worlds.WorldsAccess;
-import net.thenextlvl.worlds.generator.Generator;
+import net.thenextlvl.worlds.experimental.GeneratorType;
 import org.bukkit.Location;
-import org.bukkit.NamespacedKey;
 import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
@@ -16,8 +14,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-
-import static org.bukkit.persistence.PersistentDataType.STRING;
+import java.util.stream.Stream;
 
 public abstract class VersionHandler {
     private final @Nullable FoliaSupport foliaSupport;
@@ -61,25 +58,11 @@ public abstract class VersionHandler {
 
     public abstract String findAvailableName(Path path, String name, String format) throws IOException;
 
-    protected World.Environment toBukkit(final Environment environment) {
-        if (environment.equals(Environment.OVERWORLD)) return World.Environment.NORMAL;
-        if (environment.equals(Environment.THE_NETHER)) return World.Environment.NETHER;
-        if (environment.equals(Environment.THE_END)) return World.Environment.THE_END;
-        return World.Environment.CUSTOM;
-    }
+    public abstract GeneratorType getGeneratorType(World world);
 
-    protected void persistWorld(final World world, final Environment environment, final boolean enabled) {
-        final var worldKey = new NamespacedKey("worlds", "world_key"); // todo: remove?
-        final var dimensionKey = new NamespacedKey("worlds", "dimension"); // todo: remove?
-        world.getPersistentDataContainer().set(worldKey, STRING, world.key().asString());
-        world.getPersistentDataContainer().set(dimensionKey, STRING, environment.key().asString());
-        WorldsAccess.access().setEnabled(world, enabled);
-    }
+    public abstract Stream<Environment> listEnvironments();
 
-    protected void persistGenerator(final World world, final Generator generator) {
-        final var generatorKey = new NamespacedKey("worlds", "generator");
-        world.getPersistentDataContainer().set(generatorKey, STRING, generator.asString());
-    }
+    public abstract Environment getEnvironment(World world);
 
     public Optional<FoliaSupport> foliaSupport() {
         return Optional.ofNullable(foliaSupport);

@@ -5,17 +5,21 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.papermc.paper.FeatureHooks;
+import io.papermc.paper.math.Rotation;
 import io.papermc.paper.plugin.provider.classloader.ConfiguredPluginClassLoader;
 import io.papermc.paper.world.PaperWorldLoader;
 import io.papermc.paper.world.migration.WorldFolderMigration;
 import io.papermc.paper.world.saveddata.PaperWorldPDC;
+import net.kyori.adventure.key.Key;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.Main;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.WorldLoader;
 import net.minecraft.server.dedicated.DedicatedServerProperties;
@@ -28,10 +32,15 @@ import net.minecraft.world.entity.npc.CatSpawner;
 import net.minecraft.world.entity.npc.wanderingtrader.WanderingTraderSpawner;
 import net.minecraft.world.level.CustomSpawner;
 import net.minecraft.world.level.biome.BiomeManager;
+import net.minecraft.world.level.biome.FixedBiomeSource;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.dimension.BuiltinDimensionTypes;
 import net.minecraft.world.level.dimension.DimensionType;
 import net.minecraft.world.level.dimension.LevelStem;
+import net.minecraft.world.level.levelgen.DebugLevelSource;
+import net.minecraft.world.level.levelgen.FlatLevelSource;
+import net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator;
+import net.minecraft.world.level.levelgen.NoiseGeneratorSettings;
 import net.minecraft.world.level.levelgen.PatrolSpawner;
 import net.minecraft.world.level.levelgen.PhantomSpawner;
 import net.minecraft.world.level.levelgen.WorldDimensions;
@@ -50,7 +59,9 @@ import net.thenextlvl.worlds.preset.Preset;
 import net.thenextlvl.worlds.versions.PluginAccess;
 import net.thenextlvl.worlds.versions.VersionHandler;
 import org.bukkit.Location;
+import org.bukkit.NamespacedKey;
 import org.bukkit.World;
+import org.bukkit.WorldCreator;
 import org.bukkit.craftbukkit.CraftServer;
 import org.bukkit.craftbukkit.CraftWorld;
 import org.bukkit.craftbukkit.entity.CraftEntity;
@@ -64,15 +75,14 @@ import org.bukkit.generator.WorldInfo;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jspecify.annotations.Nullable;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.OptionalLong;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Stream;
 
 public final class SimpleVersionHandler extends VersionHandler {
     public SimpleVersionHandler(final PluginAccess plugin) {
@@ -109,7 +119,11 @@ public final class SimpleVersionHandler extends VersionHandler {
         }
     }
 
+    /**
+     * @see ServerLevel#saveLevelData(boolean)
+     */
     @Override
+    @SuppressWarnings("JavadocReference")
     public CompletableFuture<@Nullable Void> saveLevelDataAsync(final World world) {
         final var level = ((CraftWorld) world).getHandle();
         final SavedDataStorage savedDataStorage = level.getChunkSource().getDataStorage();
@@ -155,7 +169,7 @@ public final class SimpleVersionHandler extends VersionHandler {
 
     /**
      * @see MinecraftServer#createLevel(LevelStem, PaperWorldLoader.WorldLoadingInfoAndData, LevelDataAndDimensions.WorldDataAndGenSettings)
-     * @see CraftServer#createWorld(org.bukkit.WorldCreator)
+     * @see CraftServer#createWorld(WorldCreator)
      */
     @Override
     public CompletableFuture<World> createAsync(final Level level) {
@@ -168,16 +182,15 @@ public final class SimpleVersionHandler extends VersionHandler {
 
         try {
             Preconditions.checkState(console.getAllLevels().iterator().hasNext(), "Cannot create worlds before main level is created");
-            Preconditions.checkArgument(!Files.exists(directory) || Files.isDirectory(directory), "File (%s) exists and isn't a folder", directory); // todo: still required?
+            Preconditions.checkArgument(!Files.exists(directory) || Files.isDirectory(directory), "File (%s) exists and isn't a folder", directory);
 
             Preconditions.checkArgument(server.getWorld(key) == null, "World with key %s already exists", key);
             Preconditions.checkArgument(server.getWorld(name) == null, "World with name %s already exists", name);
 
             Preconditions.checkState(plugin.getServer().getWorlds().stream()
-                            .map(World::getWorldFolder)
-                            .map(File::toPath)
+                            .map(World::getWorldPath)
                             .noneMatch(directory::equals),
-                    "World with directory %s already exists", directory); // todo: still functional?
+                    "World with directory %s already exists", directory);
         } catch (final RuntimeException e) {
             return CompletableFuture.failedFuture(e);
         }
@@ -202,17 +215,17 @@ public final class SimpleVersionHandler extends VersionHandler {
         } else if (level.getEnvironment().equals(Environment.THE_END)) {
             actualDimension = LevelStem.END;
         } else {
-            throw new IllegalArgumentException("Illegal dimension (" + level.getEnvironment() + ")"); // todo: complete exceptionally
+            actualDimension = ResourceKey.create(Registries.LEVEL_STEM, toIdentifier(level.getEnvironment().key()));  // Worlds - allow custom dimensions
         }
 
-        final var resourceKey = ResourceKey.create(Registries.LEVEL_STEM, Identifier.fromNamespaceAndPath(key.namespace(), key.value())); // Worlds - create ResourceKey from key
+        final var resourceKey = ResourceKey.create(Registries.LEVEL_STEM, toIdentifier(key)); // Worlds - create ResourceKey from key
         final ResourceKey<net.minecraft.world.level.Level> dimensionKey = PaperWorldLoader.dimensionKey(resourceKey);
         final WorldLoader.DataLoadContext context = console.worldLoaderContext;
         RegistryAccess.Frozen registryAccess = context.datapackDimensions();
-        net.minecraft.core.Registry<LevelStem> contextLevelStemRegistry = registryAccess.lookupOrThrow(Registries.LEVEL_STEM);
+        Registry<LevelStem> contextLevelStemRegistry = registryAccess.lookupOrThrow(Registries.LEVEL_STEM);
         final LevelStem configuredStem = console.registryAccess().lookupOrThrow(Registries.LEVEL_STEM).getValue(actualDimension);
         if (configuredStem == null) {
-            throw new IllegalStateException("Missing configured level stem " + actualDimension); // todo: complete exceptionally
+            return CompletableFuture.failedFuture(new IllegalStateException("Missing configured level stem " + actualDimension)); // Worlds - complete exceptionally
         }
         try {
             WorldFolderMigration.migrateApiWorld(
@@ -223,7 +236,7 @@ public final class SimpleVersionHandler extends VersionHandler {
                     dimensionKey
             );
         } catch (final IOException ex) {
-            throw new RuntimeException("Failed to migrate legacy world " + name, ex); // todo: complete exceptionally
+            return CompletableFuture.failedFuture(new RuntimeException("Failed to migrate legacy world " + name, ex)); // Worlds - complete exceptionally
         }
         PaperWorldLoader.LoadedWorldData loadedWorldData = PaperWorldLoader.loadWorldData(
                 console,
@@ -231,10 +244,9 @@ public final class SimpleVersionHandler extends VersionHandler {
                 name
         );
         final PrimaryLevelData primaryLevelData = (PrimaryLevelData) console.getWorldData();
-        WorldGenSettings worldGenSettings = level.ignoreLevelData() ? null // Worlds - ignore level data
-                : LevelStorageSource.readExistingSavedData(console.storageSource, dimensionKey, console.registryAccess(), WorldGenSettings.TYPE)
-                  .result()
-                  .orElse(null);
+        WorldGenSettings worldGenSettings = LevelStorageSource.readExistingSavedData(console.storageSource, dimensionKey, console.registryAccess(), WorldGenSettings.TYPE)
+                .result()
+                .orElse(null);
 
         if (worldGenSettings == null) {
             final WorldOptions worldOptions = new WorldOptions(level.getSeed(), level.hasStructures(), level.hasBonusChest());
@@ -253,7 +265,7 @@ public final class SimpleVersionHandler extends VersionHandler {
 
             final WorldDimensions.Complete complete = worldDimensions.bake(contextLevelStemRegistry);
             if (complete.dimensions().getValue(actualDimension) == null) {
-                throw new IllegalStateException("Missing generated level stem " + actualDimension + " for world " + name); // todo: complete exceptionally
+                return CompletableFuture.failedFuture(new IllegalStateException("Missing generated level stem " + actualDimension + " for world " + name)); // Worlds - complete exceptionally
             }
 
             worldGenSettings = new WorldGenSettings(worldOptions, worldDimensions);
@@ -265,23 +277,14 @@ public final class SimpleVersionHandler extends VersionHandler {
                     loadedWorldData.pdc(),
                     loadedWorldData.levelOverrides()
             );
-
-        } else {
-            // Worlds start - override options
-            final var options = worldGenSettings.options()
-                    .withBonusChest(level.hasBonusChest())
-                    .withStructures(level.hasStructures())
-                    .withSeed(OptionalLong.of(level.getSeed()));
-            worldGenSettings = new WorldGenSettings(options, worldGenSettings.dimensions());
-            // Worlds end
         }
 
         final WorldGenSettings genSettingsFinal = worldGenSettings;
 
-        contextLevelStemRegistry = registryAccess.lookupOrThrow(Registries.LEVEL_STEM); // todo: complete exceptionally
+        contextLevelStemRegistry = registryAccess.lookupOrThrow(Registries.LEVEL_STEM);
 
         if (console.options.has("forceUpgrade")) {
-            net.minecraft.server.Main.forceUpgrade(console.storageSource, DataFixers.getDataFixer(), console.options.has("eraseCache"), () -> true, registryAccess, console.options.has("recreateRegionFiles"));
+            Main.forceUpgrade(console.storageSource, DataFixers.getDataFixer(), console.options.has("eraseCache"), () -> true, registryAccess, console.options.has("recreateRegionFiles"));
         }
 
         final long biomeZoomSeed = BiomeManager.obfuscateSeed(genSettingsFinal.options().seed());
@@ -290,10 +293,12 @@ public final class SimpleVersionHandler extends VersionHandler {
             customStem = contextLevelStemRegistry.getValue(actualDimension);
         }
         if (customStem == null) {
-            throw new IllegalStateException("Missing level stem for world " + name + " using key " + actualDimension); // todo: complete exceptionally
+            return CompletableFuture.failedFuture(new IllegalStateException("Missing level stem for world " + name + " using key " + actualDimension)); // Worlds - complete exceptionally
         }
 
-        final WorldInfo worldInfo = new CraftWorldInfo(loadedWorldData.bukkitName(), CraftNamespacedKey.fromMinecraft(dimensionKey.identifier()), genSettingsFinal.options().seed(), primaryLevelData.enabledFeatures(), toBukkit(level.getEnvironment()) /* Worlds */, customStem.type().value(), customStem.generator(), server.getHandle().getServer().registryAccess(), loadedWorldData.uuid());
+        final var environment = toBukkitEnvironment(level.getEnvironment()); // Worlds - get bukkit environment from actual environment
+
+        final WorldInfo worldInfo = new CraftWorldInfo(loadedWorldData.bukkitName(), CraftNamespacedKey.fromMinecraft(dimensionKey.identifier()), genSettingsFinal.options().seed(), primaryLevelData.enabledFeatures(), environment, customStem.type().value(), customStem.generator(), server.getHandle().getServer().registryAccess(), loadedWorldData.uuid());
         if (biomeProvider == null && chunkGenerator != null) {
             biomeProvider = chunkGenerator.getDefaultBiomeProvider(worldInfo);
         }
@@ -313,10 +318,10 @@ public final class SimpleVersionHandler extends VersionHandler {
                 customStem,
                 primaryLevelData.isDebugWorld(),
                 biomeZoomSeed,
-                level.getEnvironment() == Environment.OVERWORLD ? list : ImmutableList.of(), // Worlds
+                level.getEnvironment().equals(Environment.OVERWORLD) ? list : ImmutableList.of(),
                 true,
                 actualDimension,
-                toBukkit(level.getEnvironment()), // Worlds
+                environment,
                 chunkGenerator,
                 biomeProvider,
                 savedDataStorage,
@@ -329,22 +334,22 @@ public final class SimpleVersionHandler extends VersionHandler {
         );
         // Worlds end
 
-        // Worlds start - set initialized flag to allow spawn location recalculation
-        switch (level.initialized()) {
-            case TRUE -> primaryLevelData.setInitialized(true);
-            case FALSE -> primaryLevelData.setInitialized(false);
-        }
+        // Worlds start - setInitialized(false) to reevaluate spawn position, construct WorldCreator for explicit override
+        if (level.resetSpawnPosition()) primaryLevelData.setInitialized(false);
+
+        final var worldCreator = level.getForcedSpawnPosition().map(position -> {
+            final var worldKey = new NamespacedKey(level.key().namespace(), level.key().value());
+            final var creator = new WorldCreator(worldKey);
+            final var rotation = level.getForcedSpawnRotation().orElseGet(() -> Rotation.rotation(0, 0));
+            creator.forcedSpawnPosition(position, rotation.yaw(), rotation.pitch());
+            return creator;
+        }).orElse(null);
         // Worlds end
 
         console.addLevel(serverLevel);
-        console.initWorld(serverLevel);
+        console.initWorld(serverLevel, worldCreator);
 
         serverLevel.setSpawnSettings(true);
-
-        // Worlds start - persist world extra data
-        persistWorld(serverLevel.getWorld(), level.getEnvironment(), level.isEnabled().toBooleanOrElse(true));
-        level.getGenerator().ifPresent(generator -> persistGenerator(serverLevel.getWorld(), generator));
-        // Worlds end
 
         FeatureHooks.tickEntityManager(serverLevel); // Worlds - start entity ticking for folia, no-op on paper
 
@@ -353,11 +358,18 @@ public final class SimpleVersionHandler extends VersionHandler {
         return CompletableFuture.completedFuture(serverLevel.getWorld());
     }
 
+    private World.Environment toBukkitEnvironment(final Environment environment) {
+        if (environment.equals(Environment.OVERWORLD)) return World.Environment.NORMAL;
+        if (environment.equals(Environment.THE_END)) return World.Environment.THE_END;
+        if (environment.equals(Environment.THE_NETHER)) return World.Environment.NETHER;
+        return World.Environment.CUSTOM;
+    }
+
     /**
      * @see WorldDimensions#replaceOverworldGenerator
      */
     private static WorldDimensions replaceGenerator(final ResourceKey<LevelStem> key, final HolderLookup.Provider registries, final Map<ResourceKey<LevelStem>, LevelStem> dimensions, final ChunkGenerator chunkGenerator) {
-        final HolderLookup<net.minecraft.world.level.dimension.DimensionType> holderLookup = registries.lookupOrThrow(Registries.DIMENSION_TYPE);
+        final HolderLookup<DimensionType> holderLookup = registries.lookupOrThrow(Registries.DIMENSION_TYPE);
         final Map<ResourceKey<LevelStem>, LevelStem> map = withGenerator(key, holderLookup, dimensions, chunkGenerator);
         return new WorldDimensions(map);
     }
@@ -366,7 +378,7 @@ public final class SimpleVersionHandler extends VersionHandler {
      * @see WorldDimensions#withOverworld(HolderLookup, Map, ChunkGenerator)
      */
     private static Map<ResourceKey<LevelStem>, LevelStem> withGenerator(
-            final ResourceKey<LevelStem> key, final HolderLookup<net.minecraft.world.level.dimension.DimensionType> dimensionTypeRegistry, final Map<ResourceKey<LevelStem>, LevelStem> dimensions, final ChunkGenerator chunkGenerator
+            final ResourceKey<LevelStem> key, final HolderLookup<DimensionType> dimensionTypeRegistry, final Map<ResourceKey<LevelStem>, LevelStem> dimensions, final ChunkGenerator chunkGenerator
     ) {
         final LevelStem levelStem = dimensions.get(key);
         final Holder<DimensionType> holder = levelStem == null
@@ -379,7 +391,7 @@ public final class SimpleVersionHandler extends VersionHandler {
      * @see WorldDimensions#withOverworld(Map, Holder, ChunkGenerator)
      */
     private static Map<ResourceKey<LevelStem>, LevelStem> withGenerator(
-            final ResourceKey<LevelStem> key, final Map<ResourceKey<LevelStem>, LevelStem> stemMap, final Holder<net.minecraft.world.level.dimension.DimensionType> dimensionType, final ChunkGenerator chunkGenerator
+            final ResourceKey<LevelStem> key, final Map<ResourceKey<LevelStem>, LevelStem> stemMap, final Holder<DimensionType> dimensionType, final ChunkGenerator chunkGenerator
     ) {
         final ImmutableMap.Builder<ResourceKey<LevelStem>, LevelStem> builder = ImmutableMap.builder();
         builder.putAll(stemMap);
@@ -390,5 +402,50 @@ public final class SimpleVersionHandler extends VersionHandler {
     @Override
     public String findAvailableName(final Path path, final String name, final String format) throws IOException {
         return FileUtil.findAvailableName(path, name, format);
+    }
+
+    @Override
+    public GeneratorType getGeneratorType(final World world) {
+        final var handle = ((CraftWorld) world).getHandle();
+        final var generator = handle.getChunkSource().getGenerator();
+        return switch (generator) {
+            case final DebugLevelSource debugLevelSource -> GeneratorType.DEBUG;
+            case final FlatLevelSource flatLevelSource -> GeneratorType.FLAT;
+            case final NoiseBasedChunkGenerator noiseGenerator -> {
+                if (noiseGenerator.stable(NoiseGeneratorSettings.LARGE_BIOMES))
+                    yield GeneratorType.LARGE_BIOMES;
+                if (noiseGenerator.stable(NoiseGeneratorSettings.AMPLIFIED))
+                    yield GeneratorType.AMPLIFIED;
+                if (noiseGenerator.getBiomeSource() instanceof FixedBiomeSource)
+                    yield GeneratorType.SINGLE_BIOME;
+                yield GeneratorType.NORMAL;
+            }
+            default -> GeneratorType.NORMAL;
+        };
+    }
+
+    @Override
+    public Stream<Environment> listEnvironments() {
+        final var console = ((CraftServer) plugin.getServer()).getServer();
+        final var registry = console.worldLoaderContext.datapackDimensions().lookupOrThrow(Registries.LEVEL_STEM);
+        return registry.keySet().stream()
+                .map(this::fromIdentifier)
+                .map(Environment::of);
+    }
+
+    @Override
+    public Environment getEnvironment(final World world) {
+        final var handle = ((CraftWorld) world).getHandle();
+        final var identifier = handle.getTypeKey().identifier();
+        return Environment.of(fromIdentifier(identifier));
+    }
+
+    @SuppressWarnings("PatternValidation")
+    private Key fromIdentifier(final Identifier identifier) {
+        return Key.key(identifier.getNamespace(), identifier.getPath());
+    }
+
+    private Identifier toIdentifier(final Key key) {
+        return Identifier.parse(key.asString());
     }
 }
