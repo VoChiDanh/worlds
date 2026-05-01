@@ -65,6 +65,12 @@ public final class SimpleWorldRegistry implements WorldRegistry {
     }
 
     @Override
+    public void registerIfAbsent(final Key key, final Dimension dimension, final boolean enabled, @Nullable final Generator generator) {
+        final var entry = entries.putIfAbsent(key, new Entry(dimension, enabled, generator));
+        if (entry == null) save();
+    }
+
+    @Override
     public void register(final Level level, final boolean enabled) {
         register(level.key(), level.getDimension(), enabled, level.getGenerator().orElse(null));
     }

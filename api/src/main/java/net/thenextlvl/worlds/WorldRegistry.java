@@ -34,6 +34,9 @@ public interface WorldRegistry {
     void register(final Key key, final Dimension dimension, final boolean enabled, @Nullable final Generator generator);
 
     @Contract(mutates = "this,io")
+    void registerIfAbsent(final Key key, final Dimension dimension, final boolean enabled, @Nullable final Generator generator);
+
+    @Contract(mutates = "this,io")
     void register(final Level level, final boolean enabled);
 
     @Contract(mutates = "this,io")
