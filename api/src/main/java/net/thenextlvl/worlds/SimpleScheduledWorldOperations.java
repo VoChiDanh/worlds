@@ -4,8 +4,6 @@ import net.kyori.adventure.key.Key;
 import net.thenextlvl.worlds.event.WorldActionScheduledEvent;
 import org.bukkit.World;
 
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.function.Consumer;
@@ -56,12 +54,15 @@ final class SimpleScheduledWorldOperations implements ScheduledWorldOperations {
 
     @Override
     public ActionResult.Status scheduleDeletion(final World world) {
-        return schedule(world, WorldActionScheduledEvent.ActionType.DELETE, this::delete);
+        return schedule(world, WorldActionScheduledEvent.ActionType.DELETE, path -> {
+            WorldFiles.delete(path);
+            WorldsAccess.access().getWorldRegistry().unregister(world.key());
+        });
     }
 
     @Override
     public ActionResult.Status scheduleRegeneration(final World world) {
-        return schedule(world, WorldActionScheduledEvent.ActionType.REGENERATE, this::regenerate);
+        return schedule(world, WorldActionScheduledEvent.ActionType.REGENERATE, WorldFiles::regenerate);
     }
 
     @Override
@@ -93,31 +94,6 @@ final class SimpleScheduledWorldOperations implements ScheduledWorldOperations {
                 operations.remove(operation);
             }
         });
-    }
-
-    private void regenerate(final Path level) {
-        // todo: upgrade to 26.1+ format
-        delete(level.resolve("DIM-1"));
-        delete(level.resolve("DIM1"));
-        delete(level.resolve("advancements"));
-        delete(level.resolve("data"));
-        delete(level.resolve("entities"));
-        delete(level.resolve("playerdata"));
-        delete(level.resolve("poi"));
-        delete(level.resolve("region"));
-        delete(level.resolve("stats"));
-    }
-
-    private void delete(final Path path) {
-        try {
-            if (!Files.isDirectory(path)) Files.deleteIfExists(path);
-            else try (final var files = Files.list(path)) {
-                files.forEach(this::delete);
-                Files.deleteIfExists(path);
-            }
-        } catch (final IOException e) {
-            WorldsAccess.access().getComponentLogger().warn("Failed to delete {}", path, e);
-        }
     }
 
     public record Operation(

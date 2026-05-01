@@ -1,6 +1,7 @@
 package net.thenextlvl.worlds;
 
 import net.kyori.adventure.key.Key;
+import net.thenextlvl.worlds.event.WorldActionScheduledEvent;
 import org.bukkit.Keyed;
 import org.bukkit.World;
 import org.jspecify.annotations.NullMarked;
@@ -41,14 +42,15 @@ public class SimpleBackupProvider implements BackupProvider {
     @Override
     public CompletableFuture<ActionResult<World>> restore(final World world, final Backup backup) {
         final var worldKey = world.key();
-        return WorldsAccess.access().unload(world, false).thenComposeAsync(success -> {
+        return WorldsAccess.access().unload(world, true).thenComposeAsync(success -> {
             if (!success) return CompletableFuture.completedFuture(
-                    ActionResult.result(null, ActionResult.Status.FAILED)
+                    ActionResult.result(null, ActionResult.Status.UNLOAD_FAILED)
             );
             final var status = restoreNow(worldKey, backup);
             if (status != ActionResult.Status.SUCCESS) {
                 return CompletableFuture.completedFuture(ActionResult.result(null, status));
             }
+            WorldsAccess.access().getScheduler().cancel(world, WorldActionScheduledEvent.ActionType.RESTORE_BACKUP);
             return WorldsAccess.access().load(worldKey);
         });
     }

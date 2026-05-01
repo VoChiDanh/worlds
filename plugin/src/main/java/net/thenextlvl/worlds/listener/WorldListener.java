@@ -27,7 +27,6 @@ public final class WorldListener implements Listener {
         plugin.getWorldRegistry().entrySet()
                 .filter(entry -> entry.getValue().enabled())
                 .map(Map.Entry::getKey)
-                .filter(plugin.levelView()::canLoad)
                 .forEach(this::loadLevel);
     }
 

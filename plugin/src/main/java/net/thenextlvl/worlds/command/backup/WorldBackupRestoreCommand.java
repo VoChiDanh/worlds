@@ -75,7 +75,7 @@ final class WorldBackupRestoreCommand extends SimpleCommand {
                 return;
             }
 
-            plugin.levelView().restoreBackupAsync(world, backup, schedule).thenAccept(result -> {
+            plugin.restoreBackup(world, backup, schedule).thenAccept(result -> {
                 final var message = switch (result.status()) {
                     case SUCCESS -> "world.backup.restore.success";
                     case SCHEDULED -> "world.backup.restore.scheduled";

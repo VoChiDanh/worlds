@@ -52,10 +52,10 @@ final class WorldRegenerateCommand extends SimpleCommand {
         final var schedule = flags.contains("--schedule");
         if (!schedule) plugin.bundle().sendMessage(context.getSource().getSender(), "world.regenerate",
                 Placeholder.parsed("world", world.getName()));
-        plugin.levelView().regenerateAsync(world, schedule, builder -> {
+        plugin.regenerate(world, schedule, builder -> {
             if (flags.contains("--seed")) builder.seed(null).resetSpawnPosition(true);
         }).thenAccept(result -> {
-            final var message = switch (result) {
+            final var message = switch (result.status()) {
                 case SUCCESS -> "world.regenerate.success";
                 case SCHEDULED -> "world.regenerate.scheduled";
                 case REQUIRES_SCHEDULING -> "world.regenerate.disallowed";

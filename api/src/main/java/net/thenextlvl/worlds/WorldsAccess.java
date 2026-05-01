@@ -7,6 +7,7 @@ import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.CheckReturnValue;
 import org.jetbrains.annotations.Contract;
+import org.jspecify.annotations.Nullable;
 
 import java.nio.file.Path;
 import java.util.concurrent.CompletableFuture;
@@ -54,10 +55,25 @@ public interface WorldsAccess extends Plugin {
     CompletableFuture<ActionResult<Void>> delete(World world);
 
     @Contract(mutates = "param1")
+    CompletableFuture<ActionResult<Void>> delete(World world, boolean schedule);
+
+    @Contract(mutates = "param1")
     CompletableFuture<ActionResult<World>> regenerate(World world);
 
     @Contract(mutates = "param1")
     CompletableFuture<ActionResult<World>> regenerate(World world, Consumer<Level.Builder> builder);
+
+    @Contract(mutates = "param1")
+    CompletableFuture<ActionResult<World>> regenerate(World world, boolean schedule, Consumer<Level.Builder> builder);
+
+    @Contract(mutates = "param1")
+    CompletableFuture<Backup> createBackup(World world, @Nullable String name);
+
+    @Contract(mutates = "param1")
+    CompletableFuture<ActionResult<World>> restoreBackup(World world, Backup backup);
+
+    @Contract(mutates = "param1")
+    CompletableFuture<ActionResult<World>> restoreBackup(World world, Backup backup, boolean schedule);
 
     @Contract(pure = true)
     boolean isEnabled(World world);

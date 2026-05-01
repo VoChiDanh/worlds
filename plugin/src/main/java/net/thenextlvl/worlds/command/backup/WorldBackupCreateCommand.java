@@ -46,7 +46,7 @@ final class WorldBackupCreateCommand extends BrigadierCommand {
         final var sender = context.getSource().getSender();
         final var placeholder = Placeholder.parsed("world", world.getName());
         plugin.bundle().sendMessage(sender, "world.backup", placeholder);
-        plugin.levelView().createBackupAsync(world, name).thenAccept(backup -> {
+        plugin.createBackup(world, name).thenAccept(backup -> {
             final var bytes = backup.size();
             final var kb = bytes / 1024d;
             final var mb = kb / 1024d;

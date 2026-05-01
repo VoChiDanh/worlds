@@ -51,8 +51,8 @@ final class WorldDeleteCommand extends SimpleCommand {
         final var schedule = flags.contains("--schedule");
         if (!schedule) plugin.bundle().sendMessage(context.getSource().getSender(), "world.delete",
                 Placeholder.parsed("world", world.getName()));
-        plugin.levelView().deleteAsync(world, schedule).thenAccept(result -> {
-            final var message = switch (result) {
+        plugin.delete(world, schedule).thenAccept(result -> {
+            final var message = switch (result.status()) {
                 case SUCCESS -> "world.delete.success";
                 case SCHEDULED -> "world.delete.scheduled";
                 case REQUIRES_SCHEDULING -> "world.delete.disallowed";

@@ -2,18 +2,11 @@ package net.thenextlvl.worlds.view;
 
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.key.KeyPattern;
-import net.thenextlvl.worlds.ActionResult;
-import net.thenextlvl.worlds.Backup;
 import net.thenextlvl.worlds.Level;
 import net.thenextlvl.worlds.WorldOperationException;
 import net.thenextlvl.worlds.WorldRegistry;
 import net.thenextlvl.worlds.WorldsPlugin;
-import net.thenextlvl.worlds.event.WorldActionScheduledEvent.ActionType;
-import net.thenextlvl.worlds.event.WorldBackupEvent;
-import net.thenextlvl.worlds.event.WorldBackupRestoreEvent;
 import net.thenextlvl.worlds.event.WorldCloneEvent;
-import net.thenextlvl.worlds.event.WorldDeleteEvent;
-import net.thenextlvl.worlds.event.WorldRegenerateEvent;
 import org.bukkit.PortalType;
 import org.bukkit.World;
 import org.bukkit.generator.WorldInfo;
@@ -36,8 +29,6 @@ import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static org.bukkit.event.player.PlayerTeleportEvent.TeleportCause;
-
 @NullMarked
 public class PaperLevelView {
     private static final Key OVERWORLD = Key.key("overworld");
@@ -46,7 +37,7 @@ public class PaperLevelView {
 
     // todo: update for new folder structure
     private static final Set<String> SKIP_DIRECTORIES = Set.of("advancements", "datapacks", "playerdata", "stats");
-    private static final Set<String> SKIP_FILES = Set.of("uid.dat", "session.lock");
+    private static final Set<String> SKIP_FILES = Set.of("metadata.dat", "session.lock");
 
     protected final WorldsPlugin plugin;
 
@@ -142,7 +133,7 @@ public class PaperLevelView {
 
     public @Unmodifiable Set<Path> listLevelFolders() {
         return listDirectories().stream()
-                .filter(this::isLevel)
+                .filter(path -> Files.isDirectory(path.resolve("region")))
                 .collect(Collectors.toUnmodifiableSet());
     }
 
@@ -158,24 +149,6 @@ public class PaperLevelView {
         } catch (final IOException e) {
             return Set.of();
         }
-    }
-
-    public boolean canLoad(final Key key) {
-        return plugin.getServer().getWorlds().stream()
-                .map(World::key)
-                .noneMatch(key::equals);
-    }
-
-    public boolean hasEndDimension(final Path level) {
-        return Files.isDirectory(level.resolve("DIM1"));
-    }
-
-    public boolean hasNetherDimension(final Path level) {
-        return Files.isDirectory(level.resolve("DIM-1"));
-    }
-
-    public boolean isLevel(final Path path) {
-        return Files.isDirectory(path.resolve("region"));
     }
 
     public CompletableFuture<Boolean> unloadAsync(final World world, final boolean save) {
@@ -208,77 +181,6 @@ public class PaperLevelView {
 
     public CompletableFuture<@Nullable Void> saveLevelDataAsync(final World world) {
         return plugin.handler().saveLevelDataAsync(world);
-    }
-
-    public CompletableFuture<Backup> createBackupAsync(final World world, @Nullable final String name) {
-        return plugin.supplyGlobal(() -> {
-            new WorldBackupEvent(world).callEvent();
-            return saveAsync(world, true).thenCompose(ignored -> plugin.getBackupProvider().backup(world, name));
-        });
-    }
-
-    public CompletableFuture<ActionResult<World>> restoreBackupAsync(final World world, final Backup backup, final boolean schedule) {
-        return plugin.supplyGlobal(() -> {
-            if (schedule) return CompletableFuture.completedFuture(scheduleRestoreBackup(world, backup));
-            if (isOverworld(world)) return CompletableFuture.completedFuture(
-                    ActionResult.result(null, ActionResult.Status.REQUIRES_SCHEDULING)
-            );
-            if (!new WorldBackupRestoreEvent(world, backup).callEvent())
-                return CompletableFuture.failedFuture(new WorldOperationException(
-                        WorldOperationException.Reason.EVENT_CANCELLED
-                ).world(world.getName()).key(world.key()).backup(backup.name()));
-            return restoreBackupInternal(world, backup);
-        });
-    }
-
-    public boolean cancelScheduledBackupRestoration(final World world) {
-        return plugin.getScheduler().cancel(world, ActionType.RESTORE_BACKUP);
-    }
-
-    public boolean isBackupRestorationScheduled(final World world) {
-        return plugin.getScheduler().isScheduled(world, ActionType.RESTORE_BACKUP);
-    }
-
-    private ActionResult<World> scheduleRestoreBackup(final World world, final Backup backup) {
-        final var result = plugin.getScheduler().scheduleBackupRestoration(world, backup);
-        return ActionResult.result(null, result);
-    }
-
-    private CompletableFuture<ActionResult<World>> restoreBackupInternal(final World world, final Backup backup) {
-        final var players = world.getPlayers();
-        final var fallback = getOverworld().getSpawnLocation();
-        return CompletableFuture.allOf(players.stream()
-                .map(player -> player.teleportAsync(fallback, TeleportCause.PLUGIN).thenAccept(success -> {
-                    if (!success) player.kick(plugin.bundle().component("world.unload.kicked", player));
-                }))
-                .toArray(CompletableFuture[]::new)
-        ).thenCompose(ignored -> {
-            final var worldPath = world.key();
-            return unloadAsync(world, true).thenComposeAsync(success -> {
-                if (!success) return CompletableFuture.completedFuture(
-                        ActionResult.<World>result(null, ActionResult.Status.UNLOAD_FAILED)
-                );
-                final var status = backup.provider().restoreNow(worldPath, backup);
-                if (status != ActionResult.Status.SUCCESS) {
-                    return CompletableFuture.completedFuture(ActionResult.<World>result(null, status));
-                }
-                plugin.getScheduler().cancel(world, ActionType.RESTORE_BACKUP);
-                final var level = plugin.levelView().read(worldPath).orElseThrow().build();
-                return level.create().thenApply(restored -> {
-                    plugin.getWorldRegistry().register(level, true);
-                    players.forEach(player -> player.teleportAsync(restored.getSpawnLocation(), TeleportCause.PLUGIN));
-                    return ActionResult.result(restored, ActionResult.Status.SUCCESS);
-                });
-            }).exceptionallyCompose(throwable -> {
-                final var t = throwable.getCause() != null ? throwable.getCause() : throwable;
-                final var level = Level.copy(world).build();
-                return level.create().thenCompose(restored -> {
-                    plugin.getWorldRegistry().register(level, true);
-                    players.forEach(player -> player.teleportAsync(restored.getSpawnLocation(), TeleportCause.PLUGIN));
-                    return CompletableFuture.failedFuture(t);
-                });
-            });
-        });
     }
 
     public String findFreeName(final String name) {
@@ -408,126 +310,6 @@ public class PaperLevelView {
                 ).key(clone.key()).world(clone.getName()).path(clone.getDirectory()));
             }
         }) : clone.create();
-    }
-
-    public CompletableFuture<ActionResult.Status> deleteAsync(final World world, final boolean schedule) {
-        return plugin.supplyGlobal(() -> schedule ? CompletableFuture.completedFuture(scheduleDeletion(world)) : deleteNow(world));
-    }
-
-    public boolean cancelScheduledDeletion(final World world) {
-        return plugin.getScheduler().cancel(world, ActionType.DELETE);
-    }
-
-    public boolean isDeletionScheduled(final World world) {
-        return plugin.getScheduler().isScheduled(world, ActionType.DELETE);
-    }
-
-    public CompletableFuture<ActionResult.Status> regenerateAsync(final World world, final boolean schedule, final Consumer<Level.Builder> builder) {
-        return plugin.supplyGlobal(() -> schedule ? CompletableFuture.completedFuture(scheduleRegeneration(world)) : regenerateNow(world, builder));
-    }
-
-    public boolean cancelScheduledRegeneration(final World world) {
-        return plugin.getScheduler().cancel(world, ActionType.REGENERATE);
-    }
-
-    public boolean isRegenerationScheduled(final World world) {
-        return plugin.getScheduler().isScheduled(world, ActionType.REGENERATE);
-    }
-
-    private CompletableFuture<ActionResult.Status> deleteNow(final World world) {
-        if (isOverworld(world)) return CompletableFuture.completedFuture(ActionResult.Status.REQUIRES_SCHEDULING);
-
-        if (!new WorldDeleteEvent(world).callEvent())
-            return CompletableFuture.completedFuture(ActionResult.Status.FAILED);
-
-        final var fallback = getOverworld().getSpawnLocation();
-        return CompletableFuture.allOf(world.getPlayers().stream()
-                .map(player -> player.teleportAsync(fallback, TeleportCause.PLUGIN).thenAccept(success -> {
-                    if (!success) player.kick(plugin.bundle().component("world.unload.kicked", player));
-                }))
-                .toArray(CompletableFuture[]::new)
-        ).thenCompose(ignored -> unloadAsync(world, false).thenApplyAsync(success -> {
-            if (!success) return ActionResult.Status.UNLOAD_FAILED;
-            delete(world.getWorldPath());
-            plugin.getWorldRegistry().unregister(world.key());
-            plugin.getScheduler().cancel(world, ActionType.DELETE);
-            return ActionResult.Status.SUCCESS;
-        }).exceptionally(throwable -> {
-            plugin.getComponentLogger().warn("Failed to delete world", throwable);
-            return ActionResult.Status.FAILED;
-        }));
-    }
-
-    private ActionResult.Status scheduleDeletion(final World world) {
-        return plugin.getScheduler().schedule(world, ActionType.DELETE, path -> {
-            delete(path);
-            plugin.getWorldRegistry().unregister(world.key());
-        });
-    }
-
-    private CompletableFuture<ActionResult.Status> regenerateNow(final World world, final Consumer<Level.Builder> consumer) {
-        if (isOverworld(world)) return CompletableFuture.completedFuture(ActionResult.Status.REQUIRES_SCHEDULING);
-
-        if (!new WorldRegenerateEvent(world).callEvent())
-            return CompletableFuture.failedFuture(new WorldOperationException(
-                    WorldOperationException.Reason.EVENT_CANCELLED
-            ).world(world.getName()).key(world.key()));
-
-        final var players = world.getPlayers();
-        final var fallback = getOverworld().getSpawnLocation();
-        return CompletableFuture.allOf(players.stream()
-                .map(player -> player.teleportAsync(fallback, TeleportCause.PLUGIN).thenAccept(success -> {
-                    if (!success) player.kick(plugin.bundle().component("world.unload.kicked", player));
-                }))
-                .toArray(CompletableFuture[]::new)
-        ).thenCompose(ignored -> saveLevelDataAsync(world).thenCompose(ignored1 -> {
-            return unloadAsync(world, false).thenCompose(success -> {
-                if (!success) return CompletableFuture.completedFuture(ActionResult.Status.UNLOAD_FAILED);
-
-                regenerate(world.getWorldPath());
-                plugin.getScheduler().cancel(world, ActionType.REGENERATE);
-                final var builder = Level.copy(world);
-                consumer.accept(builder);
-                final var level = builder.build();
-                return level.create().thenAccept(regenerated -> {
-                    plugin.getWorldRegistry().setEnabled(level.key(), true);
-                    players.forEach(player -> player.teleportAsync(regenerated.getSpawnLocation(), TeleportCause.PLUGIN));
-                }).thenApply(ignored2 -> ActionResult.Status.SUCCESS);
-            }).exceptionallyCompose(throwable -> {
-                return CompletableFuture.failedFuture(throwable);
-            });
-        }).exceptionallyCompose(throwable -> {
-            return CompletableFuture.failedFuture(throwable);
-        }));
-    }
-
-    private ActionResult.Status scheduleRegeneration(final World world) {
-        return plugin.getScheduler().schedule(world, ActionType.REGENERATE, this::regenerate);
-    }
-
-    // todo: update to new world format
-    private void regenerate(final Path level) {
-        delete(level.resolve("DIM-1"));
-        delete(level.resolve("DIM1"));
-        delete(level.resolve("advancements"));
-        delete(level.resolve("data"));
-        delete(level.resolve("entities"));
-        delete(level.resolve("playerdata"));
-        delete(level.resolve("poi"));
-        delete(level.resolve("region"));
-        delete(level.resolve("stats"));
-    }
-
-    private void delete(final Path path) {
-        try {
-            if (!Files.isDirectory(path)) Files.deleteIfExists(path);
-            else try (final var files = Files.list(path)) {
-                files.forEach(this::delete);
-                Files.deleteIfExists(path);
-            }
-        } catch (final IOException e) {
-            plugin.getComponentLogger().warn("Failed to delete {}", path, e);
-        }
     }
 
     public void copyDirectory(final Path source, final Path destination, @Nullable final BiPredicate<Path, BasicFileAttributes> filter) throws IOException {
