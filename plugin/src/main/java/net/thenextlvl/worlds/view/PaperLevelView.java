@@ -175,8 +175,21 @@ public class PaperLevelView implements LevelView {
         return plugin.handler().getGenerator(world);
     }
 
-    @Override
     public @Unmodifiable Set<Path> listLevels() {
+        return plugin.getWorldRegistry().worlds()
+                .map(key -> getDimensionsRoot().resolve(key.namespace()).resolve(key.value()))
+                .collect(Collectors.toUnmodifiableSet());
+    }
+
+    public @Unmodifiable Set<Path> listEnabledLevels() {
+        return plugin.getWorldRegistry().entrySet()
+                .filter(entry -> entry.getValue().enabled())
+                .map(Map.Entry::getKey)
+                .map(key -> getDimensionsRoot().resolve(key.namespace()).resolve(key.value()))
+                .collect(Collectors.toUnmodifiableSet());
+    }
+
+    public @Unmodifiable Set<Path> listLevelFolders() {
         return listDirectories().stream()
                 .filter(this::isLevel)
                 .collect(Collectors.toUnmodifiableSet());

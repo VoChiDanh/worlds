@@ -38,10 +38,8 @@ public final class SimpleWorldRegistry implements WorldRegistry {
     }
 
     @Override
-    public Stream<Key> enabledWorlds() {
-        return entries.entrySet().stream()
-                .filter(entry -> entry.getValue().enabled())
-                .map(Map.Entry::getKey);
+    public Stream<Map.Entry<Key, Entry>> entrySet() {
+        return entries.entrySet().stream();
     }
 
     @Override
@@ -61,7 +59,7 @@ public final class SimpleWorldRegistry implements WorldRegistry {
 
     @Override
     public void register(final Key key, final Dimension dimension, final boolean enabled, @Nullable final Generator generator) {
-        entries.put(key, new Entry(dimension, enabled, generator));
+        entries.put(key, new Entry(dimension, enabled, generator)); // todo: throw if already registered
         save();
     }
 
@@ -72,7 +70,7 @@ public final class SimpleWorldRegistry implements WorldRegistry {
 
     @Override
     public void setEnabled(final Key key, final boolean enabled) {
-        entries.computeIfPresent(key, (ignored, entry) -> entry.withEnabled(enabled));
+        entries.computeIfPresent(key, (ignored, entry) -> entry.withEnabled(enabled)); // todo: throw if not registered
         save();
     }
 

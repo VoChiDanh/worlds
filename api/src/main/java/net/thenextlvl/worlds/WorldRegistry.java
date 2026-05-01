@@ -6,6 +6,7 @@ import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Contract;
 import org.jspecify.annotations.Nullable;
 
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -18,7 +19,7 @@ public interface WorldRegistry {
     Stream<Entry> entries();
 
     @Contract(pure = true)
-    Stream<Key> enabledWorlds();
+    Stream<Map.Entry<Key, Entry>> entrySet();
 
     @Contract(pure = true)
     Stream<Key> worlds();
