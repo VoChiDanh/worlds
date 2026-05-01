@@ -28,7 +28,8 @@ import static net.thenextlvl.worlds.command.WorldCommand.worldArgument;
 
 @NullMarked
 final class WorldBackupListCommand extends SimpleCommand {
-    private static final int MAX_BACKUPS_PER_WORLD = 5;
+    private static final int MAX_BACKUPS_PER_WORLD = 50;
+    private static final int MAX_BACKUPS_PER_WORLD_OVERVIEW = 5;
 
     private WorldBackupListCommand(final WorldsPlugin plugin) {
         super(plugin, "list", "worlds.command.backup.list");
@@ -77,8 +78,9 @@ final class WorldBackupListCommand extends SimpleCommand {
                                 plugin.bundle().sendMessage(sender, "world.backup.list.world",
                                         Placeholder.parsed("world", worldName),
                                         Formatter.number("amount", worldBackups.size()));
-                                final var hidden = worldBackups.size() - MAX_BACKUPS_PER_WORLD;
-                                final var visible = Math.min(worldBackups.size(), MAX_BACKUPS_PER_WORLD);
+                                final var limit = world == null ? MAX_BACKUPS_PER_WORLD_OVERVIEW : MAX_BACKUPS_PER_WORLD;
+                                final var hidden = worldBackups.size() - limit;
+                                final var visible = Math.min(worldBackups.size(), limit);
                                 for (var index = 0; index < visible; index++) {
                                     final var backup = worldBackups.get(index);
                                     sender.sendMessage(backup.component(plugin, sender, hidden <= 0 && index == visible - 1));
