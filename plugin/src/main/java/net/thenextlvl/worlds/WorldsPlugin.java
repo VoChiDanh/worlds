@@ -11,7 +11,6 @@ import net.thenextlvl.i18n.ComponentBundle;
 import net.thenextlvl.worlds.command.SaveAllCommand;
 import net.thenextlvl.worlds.command.SaveOffCommand;
 import net.thenextlvl.worlds.command.SaveOnCommand;
-import net.thenextlvl.worlds.command.SeedCommand;
 import net.thenextlvl.worlds.command.WorldCommand;
 import net.thenextlvl.worlds.command.WorldSetSpawnCommand;
 import net.thenextlvl.worlds.generator.GeneratorView;
@@ -200,7 +199,6 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
             event.registrar().register(SaveAllCommand.create(this), "Save all worlds");
             event.registrar().register(SaveOffCommand.create(this), "Disable automatic world saving");
             event.registrar().register(SaveOnCommand.create(this), "Enable automatic world saving");
-            event.registrar().register(SeedCommand.create(this), "Query the seed of a world");
             event.registrar().register(WorldCommand.create(this), "The main command to interact with this plugin");
             event.registrar().register(WorldSetSpawnCommand.create(this, "setworldspawn"), "Set the world spawn");
         }));
