@@ -1,7 +1,8 @@
 package net.thenextlvl.worlds;
 
+import io.papermc.paper.math.Position;
+import io.papermc.paper.math.Rotation;
 import net.kyori.adventure.key.Key;
-import net.kyori.adventure.util.TriState;
 import net.thenextlvl.worlds.experimental.GeneratorType;
 import net.thenextlvl.worlds.generator.Generator;
 import net.thenextlvl.worlds.preset.Preset;
@@ -29,9 +30,10 @@ final class SimpleLevel implements Level {
     private final @Nullable Generator generator;
     private final @Nullable Preset preset;
 
-    private final TriState enabled = TriState.NOT_SET;
-    private final TriState initialized = TriState.NOT_SET;
-    private final boolean ignoreLevelData = false;
+    private final @Nullable Position spawnPositionOverride;
+    private final @Nullable Rotation spawnRotationOverride;
+
+    private final boolean resetSpawnPosition;
 
     private final boolean bonusChest;
     private final boolean hardcore;
@@ -52,6 +54,10 @@ final class SimpleLevel implements Level {
 
         this.bonusChest = builder.bonusChest().orElse(false);
 
+        this.spawnPositionOverride = builder.forcedSpawnPosition().orElse(null);
+        this.spawnRotationOverride = builder.forcedSpawnRotation().orElse(null);
+        this.resetSpawnPosition = builder.resetSpawnPosition().orElse(false);
+
         this.generator = builder.generator;
         this.preset = builder.preset;
 
@@ -65,8 +71,10 @@ final class SimpleLevel implements Level {
 
     @Override
     public Path getDirectory() {
-        // todo: move to plugin? version dependant?
-        return WorldsAccess.access().getWorldContainer().resolve(key.namespace()).resolve(key.value());
+        return WorldsAccess.access().getWorldContainer()
+                .resolve("dimensions")
+                .resolve(key.namespace())
+                .resolve(key.value());
     }
 
     @Override
@@ -125,23 +133,23 @@ final class SimpleLevel implements Level {
     }
 
     @Override
+    public Optional<Position> getForcedSpawnPosition() {
+        return Optional.ofNullable(spawnPositionOverride);
+    }
+
+    @Override
+    public Optional<Rotation> getForcedSpawnRotation() {
+        return Optional.ofNullable(spawnRotationOverride);
+    }
+
+    @Override
     public CompletableFuture<World> create() {
         return WorldsAccess.access().create(this);
     }
 
     @Override
-    public TriState isEnabled() {
-        return enabled;
-    }
-
-    @Override
-    public boolean ignoreLevelData() {
-        return ignoreLevelData;
-    }
-
-    @Override
-    public TriState initialized() {
-        return initialized;
+    public boolean resetSpawnPosition() {
+        return resetSpawnPosition;
     }
 
     @Override
@@ -166,11 +174,14 @@ final class SimpleLevel implements Level {
     static final class Builder implements Level.Builder {
         private @Nullable Boolean bonusChest;
         private @Nullable Boolean hardcore;
+        private @Nullable Boolean resetSpawnPosition;
         private @Nullable Boolean structures;
         private @Nullable Environment environment;
         private @Nullable Generator generator;
         private @Nullable GeneratorType generatorType;
         private @Nullable Long seed;
+        private @Nullable Position spawnPositionOverride;
+        private @Nullable Rotation spawnRotationOverride;
         private @Nullable Preset preset;
         private @Nullable String name;
         private Key key;
@@ -196,7 +207,7 @@ final class SimpleLevel implements Level {
         }
 
         @Override
-        public Level.Builder environment(@Nullable final Environment environment) {
+        public Level.Builder environment(final @Nullable Environment environment) {
             this.environment = environment;
             return this;
         }
@@ -253,6 +264,36 @@ final class SimpleLevel implements Level {
         @Override
         public Level.Builder bonusChest(@Nullable final Boolean bonusChest) {
             this.bonusChest = bonusChest;
+            return this;
+        }
+
+        @Override
+        public Optional<Boolean> resetSpawnPosition() {
+            return Optional.ofNullable(resetSpawnPosition);
+        }
+
+        @Override
+        public Level.Builder resetSpawnPosition(@Nullable final Boolean reset) {
+            this.resetSpawnPosition = reset;
+            return this;
+        }
+
+        @Override
+        public Optional<Position> forcedSpawnPosition() {
+            return Optional.ofNullable(spawnPositionOverride);
+        }
+
+        @Override
+        public Optional<Rotation> forcedSpawnRotation() {
+            return Optional.ofNullable(spawnRotationOverride);
+        }
+
+        @Override
+        public Level.Builder forcedSpawnPosition(@Nullable final Position position, @Nullable final Rotation rotation) {
+            if (position == null && rotation != null)
+                throw new IllegalArgumentException("Cannot force spawn rotation only");
+            this.spawnPositionOverride = position;
+            this.spawnRotationOverride = rotation;
             return this;
         }
 

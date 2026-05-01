@@ -1,15 +1,15 @@
 package net.thenextlvl.worlds;
 
+import io.papermc.paper.math.Position;
+import io.papermc.paper.math.Rotation;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.key.Keyed;
-import net.kyori.adventure.util.TriState;
 import net.thenextlvl.worlds.experimental.GeneratorType;
 import net.thenextlvl.worlds.generator.Generator;
 import net.thenextlvl.worlds.preset.Preset;
 import org.bukkit.World;
 import org.bukkit.generator.BiomeProvider;
 import org.bukkit.generator.ChunkGenerator;
-import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Contract;
 import org.jspecify.annotations.Nullable;
 
@@ -20,7 +20,7 @@ import java.util.concurrent.CompletableFuture;
 
 public sealed interface Level extends Keyed permits SimpleLevel {
     Path getDirectory();
-    
+
     @Contract(pure = true)
     String getName();
 
@@ -40,6 +40,9 @@ public sealed interface Level extends Keyed permits SimpleLevel {
     boolean hasBonusChest();
 
     @Contract(pure = true)
+    boolean resetSpawnPosition();
+
+    @Contract(pure = true)
     GeneratorType getGeneratorType();
 
     @Contract(pure = true)
@@ -54,20 +57,13 @@ public sealed interface Level extends Keyed permits SimpleLevel {
     @Contract(pure = true)
     Optional<Preset> getPreset();
 
+    @Contract(pure = true)
+    Optional<Position> getForcedSpawnPosition();
+
+    @Contract(pure = true)
+    Optional<Rotation> getForcedSpawnRotation();
+
     CompletableFuture<World> create();
-
-    // todo: Stuff that has to go
-
-    @ApiStatus.Experimental
-    TriState isEnabled();
-
-    @ApiStatus.Experimental
-    boolean ignoreLevelData();
-
-    @ApiStatus.Experimental
-    TriState initialized();
-
-    // todo end
 
     @Contract(pure = true)
     Builder toBuilder();
@@ -118,6 +114,21 @@ public sealed interface Level extends Keyed permits SimpleLevel {
 
         @Contract(mutates = "this")
         Builder bonusChest(@Nullable Boolean bonusChest);
+
+        @Contract(pure = true)
+        Optional<Boolean> resetSpawnPosition();
+
+        @Contract(mutates = "this")
+        Builder resetSpawnPosition(@Nullable Boolean reset);
+
+        @Contract(pure = true)
+        Optional<Position> forcedSpawnPosition();
+
+        @Contract(pure = true)
+        Optional<Rotation> forcedSpawnRotation();
+
+        @Contract(value = "null, !null -> fail", mutates = "this")
+        Builder forcedSpawnPosition(@Nullable Position position, @Nullable Rotation rotation);
 
         @Contract(pure = true)
         Optional<GeneratorType> generatorType();
