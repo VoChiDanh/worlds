@@ -10,6 +10,7 @@ import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.thenextlvl.worlds.Dimension;
 import net.thenextlvl.worlds.Level;
+import net.thenextlvl.worlds.WorldOperationException;
 import net.thenextlvl.worlds.WorldsPlugin;
 import net.thenextlvl.worlds.command.argument.DimensionArgumentType;
 import net.thenextlvl.worlds.command.argument.GeneratorArgument;
@@ -65,7 +66,12 @@ final class WorldImportCommand extends OptionCommand {
 
         final var name = displayName != null ? displayName : key.asString();
 
-        // if (plugin.getWorldRegistry().isRegistered(key)) return 0; // todo: deny importing worlds that have already been imported
+        if (plugin.getWorldRegistry().isRegistered(key)) {
+            CommandFailureHandler.handle(plugin, sender, new WorldOperationException(
+                    WorldOperationException.Reason.WORLD_KEY_EXISTS
+            ).key(key));
+            return 0;
+        }
 
         plugin.bundle().sendMessage(sender, "world.import", Placeholder.parsed("world", name));
 
