@@ -52,8 +52,6 @@ public abstract class VersionHandler {
 
     public abstract @Nullable Location getRespawnLocation(Player player, boolean load);
 
-    public abstract @Nullable Boolean hasBonusChest(final World world);
-
     public abstract CompletableFuture<World> createAsync(Level level);
 
     public abstract String findAvailableName(Path path, String name, String format) throws IOException;

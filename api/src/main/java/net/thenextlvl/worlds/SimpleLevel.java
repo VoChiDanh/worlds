@@ -168,6 +168,19 @@ final class SimpleLevel implements Level {
         return key;
     }
 
+    public static Level.Builder copy(final World world) {
+        final var access = WorldsAccess.access();
+        return Level.builder(world.key())
+                .bonusChest(world.hasBonusChest())
+                .hardcore(world.isHardcore())
+                .structures(world.canGenerateStructures())
+                .seed(world.getSeed())
+                .key(world.key())
+                .dimension(access.getDimension(world))
+                .seed(world.getSeed())
+                .name(world.getName());
+    }
+
     static final class Builder implements Level.Builder {
         private @Nullable Boolean bonusChest;
         private @Nullable Boolean hardcore;

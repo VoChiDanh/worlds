@@ -6,6 +6,7 @@ import net.thenextlvl.worlds.ActionResult;
 import net.thenextlvl.worlds.Backup;
 import net.thenextlvl.worlds.Level;
 import net.thenextlvl.worlds.WorldOperationException;
+import net.thenextlvl.worlds.WorldRegistry;
 import net.thenextlvl.worlds.WorldsPlugin;
 import net.thenextlvl.worlds.event.WorldActionScheduledEvent.ActionType;
 import net.thenextlvl.worlds.event.WorldBackupEvent;
@@ -108,9 +109,13 @@ public class PaperLevelView {
     }
 
     public Optional<Level.Builder> read(final Key key) {
-        return plugin.getWorldRegistry().get(key).map(entry -> Level.builder(key)
+        return plugin.getWorldRegistry().get(key).map(entry -> read(key, entry));
+    }
+
+    public Level.Builder read(final Key key, final WorldRegistry.Entry entry) {
+        return Level.builder(key)
                 .dimension(entry.dimension())
-                .generator(entry.generator()));
+                .generator(entry.generator());
     }
 
     @SuppressWarnings("PatternValidation")
@@ -266,7 +271,7 @@ public class PaperLevelView {
                 });
             }).exceptionallyCompose(throwable -> {
                 final var t = throwable.getCause() != null ? throwable.getCause() : throwable;
-                final var level = plugin.levelBuilder(world).build();
+                final var level = Level.copy(world).build();
                 return level.create().thenCompose(restored -> {
                     plugin.getWorldRegistry().register(level, true);
                     players.forEach(player -> player.teleportAsync(restored.getSpawnLocation(), TeleportCause.PLUGIN));
@@ -365,7 +370,7 @@ public class PaperLevelView {
     }
 
     private CompletableFuture<World> cloneInternal(final World world, final Consumer<Level.Builder> builder, final boolean full) {
-        final var levelBuilder = plugin.levelBuilder(world);
+        final var levelBuilder = Level.copy(world);
 
         levelBuilder.name(findFreeName(world.getName()));
         levelBuilder.key(findFreeKey(world.key()));
@@ -481,7 +486,7 @@ public class PaperLevelView {
 
                 regenerate(world.getWorldPath());
                 plugin.getScheduler().cancel(world, ActionType.REGENERATE);
-                final var builder = plugin.levelBuilder(world);
+                final var builder = Level.copy(world);
                 consumer.accept(builder);
                 final var level = builder.build();
                 return level.create().thenAccept(regenerated -> {

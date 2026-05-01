@@ -6,8 +6,6 @@ import net.thenextlvl.worlds.event.WorldActionScheduledEvent;
 import org.bukkit.World;
 import org.jetbrains.annotations.Contract;
 
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.function.Consumer;
 import java.util.stream.Stream;

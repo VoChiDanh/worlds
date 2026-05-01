@@ -7,7 +7,6 @@ import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
-import net.thenextlvl.worlds.Level;
 import net.thenextlvl.worlds.WorldOperationException;
 import net.thenextlvl.worlds.WorldsPlugin;
 import net.thenextlvl.worlds.command.argument.KeyArgument;
@@ -44,20 +43,15 @@ final class WorldLoadCommand extends SimpleCommand {
         plugin.bundle().sendMessage(sender, "world.load", placeholder);
 
         // if (!plugin.getWorldRegistry().isRegistered(key)) return 0; // todo: deny loading worlds that have not been imported
-        
-        final var build = plugin.levelView().read(key).map(Level.Builder::build);
-        final var future = build.map(Level::create).orElse(null);
 
-        if (future == null) {
-            sendFailure(sender, WorldOperationException.Reason.MISSING_LEVEL_STEM, key);
-            return 0;
-        }
-
-        future.thenAccept(level -> {
-            plugin.getWorldRegistry().setEnabled(level.key(), true);
-            plugin.bundle().sendMessage(sender, "world.load.success", Placeholder.parsed("world", level.getName()));
-            if (!(sender instanceof final Entity entity)) return;
-            entity.teleportAsync(level.getSpawnLocation(), COMMAND);
+        plugin.load(key).thenAccept(result -> {
+            // todo: AtionResult sucks, rework with proper exceptions
+            if (result.isSuccess()) result.result().ifPresent(world -> {
+                plugin.getWorldRegistry().setEnabled(world.key(), true);
+                plugin.bundle().sendMessage(sender, "world.load.success", placeholder);
+                if (!(sender instanceof final Entity entity)) return;
+                entity.teleportAsync(world.getSpawnLocation(), COMMAND);
+            });
         }).exceptionally(throwable -> {
             CommandFailureHandler.handle(plugin, sender, throwable, placeholder);
             return null;

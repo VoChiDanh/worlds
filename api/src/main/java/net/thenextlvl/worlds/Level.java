@@ -68,6 +68,12 @@ public sealed interface Level extends Keyed permits SimpleLevel {
     @Contract(pure = true)
     Builder toBuilder();
 
+    @Contract(value = "_ -> new", pure = true)
+    static Builder copy(final World world) {
+        return SimpleLevel.copy(world);
+    }
+
+    @Contract(value = "_ -> new", pure = true)
     static Builder builder(final Key key) {
         return new SimpleLevel.Builder(key);
     }

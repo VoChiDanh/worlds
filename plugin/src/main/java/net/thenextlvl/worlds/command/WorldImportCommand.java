@@ -76,9 +76,8 @@ final class WorldImportCommand extends OptionCommand {
                 .preset(preset)
                 .dimension(dimension)
                 .build();
-        final var world = build.create();
 
-        world.thenAccept(level -> {
+        build.create().thenAccept(level -> {
             plugin.getWorldRegistry().register(build, true);
             plugin.bundle().sendMessage(sender, "world.import.success",
                     Placeholder.parsed("world", level.getName()));

@@ -10,6 +10,7 @@ import io.papermc.paper.command.brigadier.Commands;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.thenextlvl.worlds.Dimension;
+import net.thenextlvl.worlds.Level;
 import net.thenextlvl.worlds.WorldsPlugin;
 import net.thenextlvl.worlds.command.argument.DimensionArgumentType;
 import net.thenextlvl.worlds.command.argument.KeyArgument;
@@ -66,7 +67,7 @@ final class WorldRecreateCommand extends OptionCommand {
             return 0;
         }
 
-        final var builder = plugin.levelBuilder(world);
+        final var builder = Level.copy(world);
 
         tryGetArgument(context, "bonus-chest", Boolean.class).ifPresent(builder::bonusChest);
         tryGetArgument(context, "dimension", Dimension.class).ifPresent(builder::dimension);

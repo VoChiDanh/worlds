@@ -163,11 +163,6 @@ public final class SimpleVersionHandler extends VersionHandler {
         return player.getRespawnLocation(load);
     }
 
-    @Override
-    public Boolean hasBonusChest(final World world) {
-        return world.hasBonusChest();
-    }
-
     /**
      * @see MinecraftServer#createLevel(LevelStem, PaperWorldLoader.WorldLoadingInfoAndData, LevelDataAndDimensions.WorldDataAndGenSettings)
      * @see CraftServer#createWorld(WorldCreator)

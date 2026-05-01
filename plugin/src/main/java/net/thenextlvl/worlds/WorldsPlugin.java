@@ -39,7 +39,6 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Locale;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -140,19 +139,6 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
 
     public GeneratorView generatorView() {
         return generatorView;
-    }
-
-    public Level.Builder levelBuilder(final World world) {
-        return levelView().read(world.key())
-                .orElseGet(() -> Level.builder(world.key()))
-                .bonusChest(handler().hasBonusChest(world))
-                .hardcore(world.isHardcore())
-                .structures(world.canGenerateStructures())
-                .seed(world.getSeed())
-                .key(world.key())
-                .dimension(handler().getDimension(world))
-                .seed(world.getSeed())
-                .name(world.getName());
     }
 
     public <T> CompletableFuture<T> supplyGlobal(final Supplier<CompletableFuture<T>> supplier) {
@@ -262,28 +248,8 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
     }
 
     @Override
-    public Level getLevel(final World world) {
-        return levelBuilder(world).build();
-    }
-
-    @Override
-    public Optional<Level> getLevel(final String name) {
-        return Optional.ofNullable(getServer().getWorld(name)).map(this::getLevel);
-    }
-
-    @Override
-    public Stream<Level> getLevels() {
-        return getServer().getWorlds().stream().map(this::getLevel);
-    }
-
-    @Override
     public Stream<Path> listLevels() {
         return levelView.listLevels().stream();
-    }
-
-    @Override
-    public boolean isLevel(final Path path) {
-        return levelView.isLevel(path);
     }
 
     @Override
@@ -299,11 +265,7 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
 
     @Override
     public CompletableFuture<World> create(final Level level) {
-        return supplyGlobal(() -> handler().createAsync(level).thenApply(world -> {
-            // todo: api to make worlds autoload
-            worldRegistry.register(level, true);
-            return world;
-        }));
+        return supplyGlobal(() -> handler().createAsync(level));
     }
 
     @Override

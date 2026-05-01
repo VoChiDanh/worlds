@@ -6,7 +6,6 @@ import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Contract;
 import org.jspecify.annotations.Nullable;
 
-import java.nio.file.Path;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
@@ -25,7 +24,7 @@ public interface BackupProvider {
 
     @ApiStatus.OverrideOnly
     @Contract(mutates = "io")
-    ActionResult.Status restoreNow(Path path, Backup backup);
+    ActionResult.Status restoreNow(Key key, Backup backup);
 
     @Contract(pure = true)
     CompletableFuture<Stream<Backup>> listBackups();

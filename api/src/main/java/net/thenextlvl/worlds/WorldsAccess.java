@@ -9,7 +9,6 @@ import org.jetbrains.annotations.CheckReturnValue;
 import org.jetbrains.annotations.Contract;
 
 import java.nio.file.Path;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
@@ -36,25 +35,9 @@ public interface WorldsAccess extends Plugin {
     Path getLevelDirectory();
 
     @Contract(pure = true)
-    Level getLevel(World world);
-
-    @Contract(pure = true)
-    Optional<Level> getLevel(String name);
-
-    @Contract(pure = true)
-    Stream<Level> getLevels();
-
-    @Contract(pure = true)
     Stream<Path> listLevels();
 
-    @Contract(pure = true)
-    boolean isLevel(Path path);
-
-    @Contract(value = "_ -> new", pure = true)
-    Optional<Level.Builder> read(Path directory);
-
-    @Contract(value = "_ -> new", pure = true)
-    CompletableFuture<ActionResult<World>> load(Path directory);
+    CompletableFuture<ActionResult<World>> load(Key key);
 
     CompletableFuture<World> create(Level level);
 

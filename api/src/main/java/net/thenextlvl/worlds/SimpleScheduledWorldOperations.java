@@ -66,7 +66,7 @@ final class SimpleScheduledWorldOperations implements ScheduledWorldOperations {
 
     @Override
     public ActionResult.Status scheduleBackupRestoration(final World world, final Backup backup) {
-        return schedule(world, WorldActionScheduledEvent.ActionType.RESTORE_BACKUP, path -> backup.provider().restoreNow(path, backup));
+        return schedule(world, WorldActionScheduledEvent.ActionType.RESTORE_BACKUP, path -> backup.provider().restoreNow(world.key(), backup));
     }
 
     @Override
