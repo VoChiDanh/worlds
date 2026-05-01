@@ -65,22 +65,9 @@ paper {
                 "worlds.command.setspawn",
                 "worlds.command.spawn",
                 "worlds.command.teleport",
-                "worlds.command.unload",
-                "worlds.commands.link"
+                "worlds.command.unload"
             )
         }
-
-        register("worlds.commands.link") {
-            description = "Grants access to all world link commands"
-            children = listOf(
-                "worlds.command.link.create",
-                "worlds.command.link.remove",
-                "worlds.command.link.list"
-            )
-        }
-        register("worlds.command.link.create") { children = listOf("worlds.command.link") }
-        register("worlds.command.link.remove") { children = listOf("worlds.command.link") }
-        register("worlds.command.link.list") { children = listOf("worlds.command.link") }
 
         register("worlds.commands.save") {
             description = "Grants access to all world save commands"
@@ -98,7 +85,6 @@ paper {
         register("worlds.command.delete") { children = listOf("worlds.command") }
         register("worlds.command.import") { children = listOf("worlds.command") }
         register("worlds.command.info") { children = listOf("worlds.command") }
-        register("worlds.command.link") { children = listOf("worlds.command") }
         register("worlds.command.list") { children = listOf("worlds.command") }
         register("worlds.command.load") { children = listOf("worlds.command") }
         register("worlds.command.save") { children = listOf("worlds.command") }
