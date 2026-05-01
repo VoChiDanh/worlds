@@ -59,7 +59,8 @@ public final class SimpleWorldRegistry implements WorldRegistry {
 
     @Override
     public void register(final Key key, final Dimension dimension, final boolean enabled, @Nullable final Generator generator) {
-        entries.put(key, new Entry(dimension, enabled, generator)); // todo: throw if already registered
+        final var entry = entries.putIfAbsent(key, new Entry(dimension, enabled, generator));
+        if (entry != null) throw new IllegalStateException("World is already registered: " + key);
         save();
     }
 
