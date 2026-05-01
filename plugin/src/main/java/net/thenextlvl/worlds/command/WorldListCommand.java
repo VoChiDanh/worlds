@@ -8,20 +8,22 @@ import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
-import net.kyori.adventure.text.minimessage.tag.resolver.Formatter;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
+import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
+import net.thenextlvl.worlds.Dimension;
 import net.thenextlvl.worlds.WorldsPlugin;
 import net.thenextlvl.worlds.command.brigadier.SimpleCommand;
 import org.bukkit.World;
+import org.bukkit.command.CommandSender;
 import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 @NullMarked
@@ -43,45 +45,34 @@ final class WorldListCommand extends SimpleCommand {
                 .map(World::getWorldPath)
                 .collect(Collectors.toSet());
 
-        final var loaded = worlds.stream().map(world -> Component.text(world.key().asString())
-                .hoverEvent(HoverEvent.showText(plugin.bundle().component("world.list.hover", sender,
-                        Placeholder.parsed("world", world.key().asString()))))
-                .clickEvent(ClickEvent.runCommand("/world teleport " + world.key().asString()))
-        ).toList();
-        final var unloaded = plugin.getWorldRegistry().entrySet()
-                .map(Map.Entry::getKey)
-                .filter(key -> plugin.getServer().getWorld(key) == null)
-                .map(Key::asString)
-                .sorted()
-                .map(key -> {
-                    return Component.text(key)
-                            .hoverEvent(HoverEvent.showText(plugin.bundle().component("world.list.load.hover", sender,
-                                    Placeholder.parsed("world", key))))
-                            .clickEvent(ClickEvent.runCommand("/world load " + key));
-                })
-                .toList();
+        final var entries = new ArrayList<WorldListEntry>();
+        worlds.forEach(world -> entries.add(new WorldListEntry(world.key(), plugin.handler().getDimension(world), State.LOADED)));
+        plugin.getWorldRegistry().entrySet()
+                .filter(entry -> plugin.getServer().getWorld(entry.getKey()) == null)
+                .forEach(entry -> entries.add(new WorldListEntry(entry.getKey(), entry.getValue().dimension(), State.UNLOADED)));
+
         final var managedFolders = plugin.levelView().listLevels();
-        final var unimported = listUnimported(loadedFolders, managedFolders).stream()
-                .sorted(Comparator.comparing(Path::toString))
+        listUnimported(loadedFolders, managedFolders).stream()
                 .map(path -> plugin.levelView().key(path).orElse(null))
                 .filter(Objects::nonNull)
-                .map(Key::asString)
-                .map(key -> {
-                    return Component.text(key)
-                            .hoverEvent(HoverEvent.showText(plugin.bundle().component("world.list.import.hover", sender,
-                                    Placeholder.parsed("world", key))))
-                            .clickEvent(ClickEvent.runCommand("/world import " + key));
-                }).toList();
+                .forEach(key -> entries.add(new WorldListEntry(key, null, State.UNIMPORTED)));
 
-        plugin.bundle().sendMessage(sender, "world.list",
-                Placeholder.parsed("amount", String.valueOf(worlds.size())),
-                Formatter.joining("worlds", loaded));
-        if (!unloaded.isEmpty()) plugin.bundle().sendMessage(sender, "world.list.unloaded",
-                Placeholder.parsed("amount", String.valueOf(unloaded.size())),
-                Formatter.joining("worlds", unloaded));
-        if (!unimported.isEmpty()) plugin.bundle().sendMessage(sender, "world.list.unimported",
-                Placeholder.parsed("amount", String.valueOf(unimported.size())),
-                Formatter.joining("worlds", unimported));
+        plugin.bundle().sendMessage(sender, "world.list.header",
+                Placeholder.parsed("worlds", String.valueOf(count(entries, State.LOADED))),
+                Placeholder.parsed("unloaded", String.valueOf(count(entries, State.UNLOADED))),
+                Placeholder.parsed("unimported", String.valueOf(count(entries, State.UNIMPORTED))));
+        entries.stream()
+                .sorted()
+                .collect(Collectors.groupingBy(entry -> entry.key().namespace(), TreeMap::new, Collectors.toList()))
+                .forEach((key, value) -> {
+                    plugin.bundle().sendMessage(sender, "world.list.namespace",
+                            Placeholder.parsed("namespace", key),
+                            Placeholder.parsed("amount", String.valueOf(value.size())));
+                    for (var index = 0; index < value.size(); index++) {
+                        final var world = value.get(index);
+                        sender.sendMessage(world.component(plugin, sender, index == value.size() - 1));
+                    }
+                });
         return SINGLE_SUCCESS;
     }
 
@@ -92,11 +83,80 @@ final class WorldListCommand extends SimpleCommand {
                 .collect(Collectors.toSet());
     }
 
-    private Set<Path> listWorldFolders(final Path namespace) {
-        try (final var paths = Files.list(namespace)) {
-            return paths.filter(Files::isDirectory).collect(Collectors.toSet());
-        } catch (final IOException e) {
-            return Set.of();
+    private long count(final Iterable<WorldListEntry> entries, final State state) {
+        var count = 0;
+        for (final var entry : entries) {
+            if (entry.state == state) count++;
+        }
+        return count;
+    }
+
+    private enum State {
+        LOADED("world.list.loaded", "world.list.hover", "/world teleport "),
+        UNLOADED("world.list.unloaded", "world.list.load.hover", "/world load "),
+        UNIMPORTED("world.list.unimported", "world.list.import.hover", "/world import ");
+
+        private final String translationKey;
+        private final String hoverKey;
+        private final String command;
+
+        State(final String translationKey, final String hoverKey, final String command) {
+            this.translationKey = translationKey;
+            this.hoverKey = hoverKey;
+            this.command = command;
+        }
+    }
+
+    private record WorldListEntry(Key key, @Nullable Dimension dimension, State state) implements Comparable<WorldListEntry> {
+        private static final Comparator<WorldListEntry> COMPARATOR = Comparator
+                .comparing((WorldListEntry entry) -> entry.key.namespace())
+                .thenComparing(entry -> entry.state)
+                .thenComparingInt(WorldListEntry::dimensionOrder)
+                .thenComparing(entry -> entry.dimension != null ? entry.dimension.key().asString() : "")
+                .thenComparing(entry -> entry.key.value());
+
+        private Component component(final WorldsPlugin plugin, final CommandSender sender, final boolean last) {
+            final var key = key().asString();
+            final var placeholders = dimension != null
+                    ? new TagResolver[]{
+                    Placeholder.parsed("tree", last ? "└" : "├"),
+                    Placeholder.component("world", label()),
+                    Placeholder.parsed("dimension", displayDimension()),
+            } : new TagResolver[]{
+                    Placeholder.parsed("tree", last ? "└" : "├"),
+                    Placeholder.component("world", label()),
+            };
+            return plugin.bundle().component(state.translationKey, sender, placeholders)
+                    .hoverEvent(HoverEvent.showText(plugin.bundle().component(state.hoverKey, sender,
+                            Placeholder.parsed("world", key))))
+                    .clickEvent(ClickEvent.runCommand(state.command + key));
+        }
+
+        private Component label() {
+            return Component.text(key.value());
+        }
+
+        @Override
+        public int compareTo(final WorldListEntry other) {
+            return COMPARATOR.compare(this, other);
+        }
+
+        private int dimensionOrder() {
+            if (dimension == null) return Integer.MAX_VALUE;
+            final var key = dimension.key();
+            if (key.equals(Dimension.OVERWORLD.key())) return 0;
+            if (key.equals(Dimension.THE_NETHER.key())) return 1;
+            if (key.equals(Dimension.THE_END.key())) return 2;
+            return 3;
+        }
+
+        private String displayDimension() {
+            if (dimension == null) return "";
+            final var key = dimension.key();
+            if (key.equals(Dimension.OVERWORLD.key())) return "normal";
+            if (key.equals(Dimension.THE_NETHER.key())) return "nether";
+            if (key.equals(Dimension.THE_END.key())) return "the_end";
+            return key.asString();
         }
     }
 }
