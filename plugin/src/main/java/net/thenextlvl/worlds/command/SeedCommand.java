@@ -30,7 +30,7 @@ public final class SeedCommand extends SimpleCommand {
         final var world = tryGetArgument(context, "world", World.class)
                 .orElseGet(() -> context.getSource().getLocation().getWorld());
 
-        plugin.bundle().sendMessage(context.getSource().getSender(), "world.info.seed",
+        plugin.bundle().sendMessage(context.getSource().getSender(), "world.seed",
                 Placeholder.parsed("seed", String.valueOf(world.getSeed())));
         return SINGLE_SUCCESS;
     }

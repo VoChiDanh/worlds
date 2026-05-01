@@ -91,6 +91,14 @@ final class WorldListCommand extends SimpleCommand {
         return count;
     }
 
+    static String displayDimension(final Dimension dimension) {
+        final var key = dimension.key();
+        if (key.equals(Dimension.OVERWORLD.key())) return "normal";
+        if (key.equals(Dimension.THE_NETHER.key())) return "nether";
+        if (key.equals(Dimension.THE_END.key())) return "the_end";
+        return key.asString();
+    }
+
     private enum State {
         LOADED("world.list.loaded", "world.list.hover", "/world teleport "),
         UNLOADED("world.list.unloaded", "world.list.load.hover", "/world load "),
@@ -107,7 +115,8 @@ final class WorldListCommand extends SimpleCommand {
         }
     }
 
-    private record WorldListEntry(Key key, @Nullable Dimension dimension, State state) implements Comparable<WorldListEntry> {
+    private record WorldListEntry(Key key, @Nullable Dimension dimension,
+                                  State state) implements Comparable<WorldListEntry> {
         private static final Comparator<WorldListEntry> COMPARATOR = Comparator
                 .comparing((WorldListEntry entry) -> entry.key.namespace())
                 .thenComparing(entry -> entry.state)
@@ -121,7 +130,7 @@ final class WorldListCommand extends SimpleCommand {
                     ? new TagResolver[]{
                     Placeholder.parsed("tree", last ? "└" : "├"),
                     Placeholder.component("world", label()),
-                    Placeholder.parsed("dimension", displayDimension()),
+                    Placeholder.parsed("dimension", WorldListCommand.displayDimension(dimension)),
             } : new TagResolver[]{
                     Placeholder.parsed("tree", last ? "└" : "├"),
                     Placeholder.component("world", label()),
@@ -148,15 +157,6 @@ final class WorldListCommand extends SimpleCommand {
             if (key.equals(Dimension.THE_NETHER.key())) return 1;
             if (key.equals(Dimension.THE_END.key())) return 2;
             return 3;
-        }
-
-        private String displayDimension() {
-            if (dimension == null) return "";
-            final var key = dimension.key();
-            if (key.equals(Dimension.OVERWORLD.key())) return "normal";
-            if (key.equals(Dimension.THE_NETHER.key())) return "nether";
-            if (key.equals(Dimension.THE_END.key())) return "the_end";
-            return key.asString();
         }
     }
 }
