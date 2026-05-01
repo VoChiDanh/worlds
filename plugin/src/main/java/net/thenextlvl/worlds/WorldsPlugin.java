@@ -77,8 +77,8 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
     private final ComponentBundle bundle = ComponentBundle.builder(key, translations)
             .migrator(new MessageMigrator())
             .placeholder("prefix", "prefix")
-            .resource("worlds.properties", Locale.US)
-            .resource("worlds_german.properties", Locale.GERMANY)
+            .resource("english.properties", Locale.US)
+            .resource("german.properties", Locale.GERMANY)
             .build();
 
     private final PluginVersionChecker versionChecker = new PluginVersionChecker(this);
