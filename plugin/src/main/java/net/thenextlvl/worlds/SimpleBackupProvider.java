@@ -18,26 +18,24 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.Collection;
 import java.util.Comparator;
-import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
 @NullMarked
-class SimpleBackupProvider implements BackupProvider {
+public class SimpleBackupProvider implements BackupProvider {
     private static final BackupProvider INSTANCE = new SimpleBackupProvider();
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss")
             .withZone(ZoneId.systemDefault());
 
-    private final Path backupRoot = Path.of("backups");
-
     @Override
-    public CompletableFuture<Backup> backup(final World world) {
-        return CompletableFuture.supplyAsync(() -> createBackup(world.getWorldFolder().toPath(), world));
+    public CompletableFuture<Backup> backup(final World world, @Nullable final String name) {
+        return CompletableFuture.supplyAsync(() -> createBackup(world.getWorldFolder().toPath(), world, name));
     }
 
     @Override
@@ -57,9 +55,10 @@ class SimpleBackupProvider implements BackupProvider {
 
     @Override
     public ActionResult.Status restoreNow(final Path path, final Backup backup) {
+        if (!(backup instanceof final FileBackup fileBackup))
+            throw new IllegalStateException("Tried to restore backup from different provider");
         try {
-            final var backupPath = resolveBackupFolder(backup.key()).resolve(backup.name() + ".zip");
-            restoreBackup(path, backupPath);
+            restoreBackup(path, fileBackup.path());
             return ActionResult.Status.SUCCESS;
         } catch (final IOException e) {
             WorldsAccess.access().getComponentLogger().warn("Failed to restore backup for world {}", backup.key().asString(), e);
@@ -68,23 +67,47 @@ class SimpleBackupProvider implements BackupProvider {
     }
 
     @Override
-    public CompletableFuture<List<Backup>> listBackups() {
+    public CompletableFuture<Stream<Backup>> listBackups() {
         return CompletableFuture.supplyAsync(() -> WorldsAccess.access()
                 .getServer().getWorlds().stream()
                 .map(Keyed::key)
-                .map(this::listBackupFiles)
-                .flatMap(Collection::stream)
-                .toList());
+                .flatMap(this::listBackupFiles));
     }
 
     @Override
-    public CompletableFuture<List<Backup>> listBackups(final Key world) {
+    public CompletableFuture<Stream<Backup>> listBackups(final Key world) {
         return CompletableFuture.supplyAsync(() -> listBackupFiles(world));
     }
 
     @Override
+    public CompletableFuture<Optional<Backup>> findBackup(final Key world) {
+        return CompletableFuture.supplyAsync(() -> listBackupFiles(world).findFirst());
+    }
+
+    @Override
+    public CompletableFuture<Optional<Backup>> findBackup(final Key world, final String name) {
+        return CompletableFuture.supplyAsync(() -> {
+            final var path = resolveBackupPath(world, name);
+            if (!Files.isRegularFile(path)) return Optional.empty();
+            return Optional.of(toBackup(path, world));
+        });
+    }
+
+    @Override
+    public CompletableFuture<Boolean> delete(final Key world, final String name) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                return Files.deleteIfExists(resolveBackupPath(world, name));
+            } catch (final IOException e) {
+                return false;
+            }
+        });
+    }
+
+    @Override
     public CompletableFuture<Boolean> delete(final Backup backup) {
-        if (!(backup instanceof final FileBackup fileBackup)) return CompletableFuture.completedFuture(false);
+        if (!(backup instanceof final FileBackup fileBackup))
+            throw new IllegalStateException("Tried to delete backup from different provider");
         return CompletableFuture.supplyAsync(() -> {
             try {
                 return Files.deleteIfExists(fileBackup.path());
@@ -95,10 +118,19 @@ class SimpleBackupProvider implements BackupProvider {
     }
 
     private Path resolveBackupFolder(final Key key) {
-        return backupRoot.resolve(key.namespace()).resolve(key.value());
+        var backupFolder = System.getenv("WORLDS_BACKUP_FOLDER");
+        if (backupFolder == null) backupFolder = System.getProperty("worlds.backup.folder");
+        if (backupFolder != null) return Path.of(backupFolder).resolve(key.namespace()).resolve(key.value());
+        final var parent = WorldsAccess.access().getServer().getLevelDirectory().getParent();
+        final var root = parent != null ? parent.resolve("backups") : Path.of("backups");
+        return root.resolve(key.namespace()).resolve(key.value());
     }
 
-    private Backup createBackup(final Path worldDirectory, final World world) {
+    private Path resolveBackupPath(final Key key, final String name) {
+        return resolveBackupFolder(key).resolve(name + ".zip");
+    }
+
+    private Backup createBackup(final Path worldDirectory, final World world, @Nullable final String name) {
         final var folder = resolveBackupFolder(world.key());
         try {
             Files.createDirectories(folder);
@@ -106,8 +138,11 @@ class SimpleBackupProvider implements BackupProvider {
             throw new RuntimeException("Failed to create backup directory " + folder, e);
         }
         final var timestamp = FORMATTER.format(Instant.now());
-        final var fileName = findAvailableName(folder, timestamp);
+        final var fileName = name != null ? name + ".zip" : findAvailableName(folder, timestamp);
         final var backupPath = folder.resolve(fileName);
+        if (name != null && Files.isRegularFile(backupPath)) {
+            throw new RuntimeException("A backup named " + name + " already exists for " + world.key());
+        }
         try (final var output = new ZipOutputStream(new BufferedOutputStream(Files.newOutputStream(
                 backupPath, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE
         )))) {
@@ -175,17 +210,16 @@ class SimpleBackupProvider implements BackupProvider {
         }
     }
 
-    private List<Backup> listBackupFiles(final Key key) {
+    private Stream<Backup> listBackupFiles(final Key key) {
         final var folder = resolveBackupFolder(key);
-        if (!Files.isDirectory(folder)) return List.of();
+        if (!Files.isDirectory(folder)) return Stream.empty();
         try (final var files = Files.list(folder)) {
             return files.filter(Files::isRegularFile)
                     .filter(path -> path.getFileName().toString().endsWith(".zip"))
                     .map(path -> toBackup(path, key))
-                    .sorted(Comparator.comparing(Backup::createdAt).reversed())
-                    .toList();
+                    .sorted(Comparator.comparing(Backup::createdAt).reversed());
         } catch (final IOException e) {
-            return List.of();
+            return Stream.empty();
         }
     }
 
@@ -241,7 +275,7 @@ class SimpleBackupProvider implements BackupProvider {
         });
     }
 
-    record FileBackup(String name, Instant createdAt, long size, Path path, Key key) implements Backup {
+    public record FileBackup(String name, Instant createdAt, long size, Path path, Key key) implements Backup {
         @Override
         public BackupProvider provider() {
             return SimpleBackupProvider.INSTANCE;
