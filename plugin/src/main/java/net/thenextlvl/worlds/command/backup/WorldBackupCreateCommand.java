@@ -14,9 +14,6 @@ import org.bukkit.World;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
-import java.io.IOException;
-import java.nio.file.Files;
-
 import static net.thenextlvl.worlds.command.WorldCommand.worldArgument;
 
 @NullMarked
@@ -48,13 +45,8 @@ final class WorldBackupCreateCommand extends BrigadierCommand {
         final var sender = context.getSource().getSender();
         final var placeholder = Placeholder.parsed("world", world.getName());
         plugin.bundle().sendMessage(sender, "world.backup", placeholder);
-        plugin.levelView().createBackupAsync(world, name).thenApply(path -> {
-            try {
-                return Files.size(path);
-            } catch (final IOException e) {
-                throw new RuntimeException("Failed to calculate backup size for " + path, e);
-            }
-        }).thenAccept(bytes -> {
+        plugin.levelView().createBackupAsync(world, name).thenAccept(backup -> {
+            final var bytes = backup.size();
             final var kb = bytes / 1024d;
             final var mb = kb / 1024d;
             final var gb = mb / 1024d;

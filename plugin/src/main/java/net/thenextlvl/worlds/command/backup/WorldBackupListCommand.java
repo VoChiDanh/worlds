@@ -10,11 +10,6 @@ import net.thenextlvl.worlds.command.brigadier.SimpleCommand;
 import org.bukkit.World;
 import org.jspecify.annotations.NullMarked;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.attribute.BasicFileAttributes;
-import java.nio.file.attribute.FileTime;
-
 import static net.thenextlvl.worlds.command.WorldCommand.worldArgument;
 
 @NullMarked
@@ -31,55 +26,36 @@ final class WorldBackupListCommand extends SimpleCommand {
     @Override
     public int run(final CommandContext<CommandSourceStack> context) {
         final var world = context.getArgument("world", World.class);
-        final var backups = plugin.levelView().listBackups(world).sorted((first, second) -> {
-            try {
-                final var time1 = Files.readAttributes(first, BasicFileAttributes.class).creationTime();
-                final var time2 = Files.readAttributes(second, BasicFileAttributes.class).creationTime();
-                return time2.compareTo(time1);
-            } catch (final IOException e) {
-                return 0;
-            }
-        }).map(path -> {
-            final var name = path.getFileName().toString();
-            final var trimmed = name.substring(0, name.lastIndexOf('.'));
-            var bytes = 0L;
-            try {
-                bytes = Files.size(path);
-            } catch (final IOException e) {
-                plugin.getComponentLogger().warn("Failed to calculate backup size for {}", path, e);
-            }
-            final var kb = bytes / 1024d;
-            final var mb = kb / 1024d;
-            final var gb = mb / 1024d;
+        plugin.getBackupProvider().listBackups(world).thenAccept(backups -> {
+            final var messages = backups.map(backup -> {
+                final var bytes = backup.size();
+                final var kb = bytes / 1024d;
+                final var mb = kb / 1024d;
+                final var gb = mb / 1024d;
 
-            var time = FileTime.fromMillis(0);
-            try {
-                time = Files.readAttributes(path, BasicFileAttributes.class).creationTime();
-            } catch (final IOException e) {
-                plugin.getComponentLogger().warn("Failed to get creation time for {}", path, e);
-            }
-            final var seconds = (System.currentTimeMillis() - time.toMillis()) / 1000;
-            final var minutes = seconds / 60;
-            final var hours = minutes / 60;
-            final var days = hours / 24;
-            final var weeks = days / 7;
-            final var months = weeks / 4;
-            final var years = months / 12;
+                final var seconds = (System.currentTimeMillis() - backup.createdAt().toEpochMilli()) / 1000;
+                final var minutes = seconds / 60;
+                final var hours = minutes / 60;
+                final var days = hours / 24;
+                final var weeks = days / 7;
+                final var months = weeks / 4;
+                final var years = months / 12;
 
-            return plugin.bundle().component("world.backup.info", context.getSource().getSender(),
-                    Placeholder.parsed("world", world.key().asString()),
-                    Placeholder.parsed("identifier", trimmed),
-                    Formatter.number("size", gb >= 1 ? gb : mb >= 1 ? mb : kb >= 1 ? kb : bytes),
-                    Formatter.choice("unit", gb >= 1 ? 0 : mb >= 1 ? 1 : kb >= 1 ? 2 : 3),
-                    Formatter.number("time", years >= 1 ? years : months >= 1 ? months : weeks >= 1 ? weeks : days >= 1 ? days : hours >= 1 ? hours : minutes >= 1 ? minutes : seconds),
-                    Formatter.choice("timeunit", years >= 1 ? 0 : months >= 1 ? 1 : weeks >= 1 ? 2 : days >= 1 ? 3 : hours >= 1 ? 4 : minutes >= 1 ? 5 : 6));
-        }).toList();
-        final var message = backups.isEmpty() ? "world.backup.list.empty" : "world.backup.list";
-        plugin.bundle().sendMessage(context.getSource().getSender(), message,
-                Placeholder.parsed("world", world.getName()),
-                Formatter.number("amount", backups.size()),
-                Formatter.booleanChoice("singular", backups.size() == 1),
-                Formatter.joining("backups", backups));
+                return plugin.bundle().component("world.backup.info", context.getSource().getSender(),
+                        Placeholder.parsed("world", world.key().asString()),
+                        Placeholder.parsed("identifier", backup.name()),
+                        Formatter.number("size", gb >= 1 ? gb : mb >= 1 ? mb : kb >= 1 ? kb : bytes),
+                        Formatter.choice("unit", gb >= 1 ? 0 : mb >= 1 ? 1 : kb >= 1 ? 2 : 3),
+                        Formatter.number("time", years >= 1 ? years : months >= 1 ? months : weeks >= 1 ? weeks : days >= 1 ? days : hours >= 1 ? hours : minutes >= 1 ? minutes : seconds),
+                        Formatter.choice("timeunit", years >= 1 ? 0 : months >= 1 ? 1 : weeks >= 1 ? 2 : days >= 1 ? 3 : hours >= 1 ? 4 : minutes >= 1 ? 5 : 6));
+            }).toList();
+            final var message = messages.isEmpty() ? "world.backup.list.empty" : "world.backup.list";
+            plugin.bundle().sendMessage(context.getSource().getSender(), message,
+                    Placeholder.parsed("world", world.getName()),
+                    Formatter.number("amount", messages.size()),
+                    Formatter.booleanChoice("singular", messages.size() == 1),
+                    Formatter.joining("backups", messages));
+        });
         return SINGLE_SUCCESS;
     }
 }
