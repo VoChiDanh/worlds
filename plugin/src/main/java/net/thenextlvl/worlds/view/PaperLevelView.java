@@ -36,9 +36,7 @@ public class PaperLevelView {
     private static final Key NETHER = Key.key("the_nether");
     private static final Key END = Key.key("the_end");
 
-    // todo: update for new folder structure
-    private static final Set<String> SKIP_DIRECTORIES = Set.of("advancements", "datapacks", "playerdata", "stats");
-    private static final Set<String> SKIP_FILES = Set.of("metadata.dat", "session.lock");
+    private static final Set<String> SKIP_FILES = Set.of("metadata.dat");
 
     protected final WorldsPlugin plugin;
 
@@ -312,7 +310,6 @@ public class PaperLevelView {
         Files.walkFileTree(source, new SimpleFileVisitor<>() {
             @Override
             public FileVisitResult preVisitDirectory(final Path path, final BasicFileAttributes attributes) throws IOException {
-                if (SKIP_DIRECTORIES.contains(path.getFileName().toString())) return FileVisitResult.SKIP_SUBTREE;
                 if (filter != null && !filter.test(path, attributes)) return FileVisitResult.SKIP_SUBTREE;
                 Files.createDirectories(destination.resolve(source.relativize(path)));
                 return FileVisitResult.CONTINUE;
