@@ -39,9 +39,6 @@ final class WorldLoadCommand extends SimpleCommand {
         final var placeholder = Placeholder.parsed("world", key.asString());
 
         plugin.bundle().sendMessage(sender, "world.load", placeholder);
-
-        // if (!plugin.getWorldRegistry().isRegistered(key)) return 0; // todo: deny loading worlds that have not been imported
-
         plugin.load(key).thenAccept(world -> {
             plugin.getWorldRegistry().setEnabled(world.key(), true);
             plugin.bundle().sendMessage(sender, "world.load.success", placeholder);
