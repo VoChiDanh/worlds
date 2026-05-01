@@ -105,6 +105,10 @@ public final class WorldOperationException extends RuntimeException {
         BACKUP_RESTORE_FAILED("world.failure.backup-restore"),
         SAVE_FAILED("world.failure.save"),
         EVENT_CANCELLED("world.failure.cancelled"),
+        WORLD_NOT_FOUND("world.failure.not-found"),
+        DELETE_REQUIRES_SCHEDULING("world.delete.disallowed"),
+        REGENERATE_REQUIRES_SCHEDULING("world.regenerate.disallowed"),
+        BACKUP_RESTORE_REQUIRES_SCHEDULING("world.backup.restore.disallowed"),
         UNLOAD_FAILED("world.unload.failed"),
         INTERNAL_ERROR("world.failure.internal");
 
