@@ -4,21 +4,15 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+// todo: get this class out of here, move to impl
 final class WorldFiles {
     private WorldFiles() {
     }
 
     static void regenerate(final Path level) {
-        // todo: upgrade to 26.1+ format
-        delete(level.resolve("DIM-1"));
-        delete(level.resolve("DIM1"));
-        delete(level.resolve("advancements"));
-        delete(level.resolve("data"));
-        delete(level.resolve("entities"));
-        delete(level.resolve("playerdata"));
-        delete(level.resolve("poi"));
         delete(level.resolve("region"));
-        delete(level.resolve("stats"));
+        delete(level.resolve("entities"));
+        delete(level.resolve("poi"));
     }
 
     static void delete(final Path path) {
