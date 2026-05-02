@@ -55,6 +55,7 @@ import net.minecraft.world.level.storage.SavedDataStorage;
 import net.thenextlvl.worlds.Dimension;
 import net.thenextlvl.worlds.Level;
 import net.thenextlvl.worlds.WorldOperationException;
+import net.thenextlvl.worlds.experimental.BiomeSource;
 import net.thenextlvl.worlds.experimental.GeneratorType;
 import net.thenextlvl.worlds.preset.Preset;
 import net.thenextlvl.worlds.versions.PluginAccess;
@@ -265,10 +266,15 @@ public final class SimpleVersionHandler extends VersionHandler {
             final DedicatedServerProperties.WorldDimensionData properties = new DedicatedServerProperties.WorldDimensionData(generatorSettings, levelType);
             WorldDimensions worldDimensions = properties.create(context.datapackWorldgen());
 
-            // Worlds start - replace generators
+            // Worlds start - replace generators and biome source
             if (level.getGeneratorType().equals(GeneratorType.FLAT) || level.getGeneratorType().equals(GeneratorType.DEBUG)) {
                 worldDimensions = replaceGenerator(LevelStem.NETHER, context.datapackWorldgen(), worldDimensions.dimensions(), worldDimensions.overworld());
                 worldDimensions = replaceGenerator(LevelStem.END, context.datapackWorldgen(), worldDimensions.dimensions(), worldDimensions.overworld());
+            }
+
+            final var biomeSource = level.getBiomeSource().orElse(null);
+            if (level.getGeneratorType().equals(GeneratorType.SINGLE_BIOME) && biomeSource instanceof final BiomeSource.FixedBiomeSource fixed) {
+                worldDimensions = replaceBiomeSource(actualDimension, context.datapackWorldgen(), worldDimensions.dimensions(), fixed.biome());
             }
             // Worlds end
 
@@ -387,6 +393,24 @@ public final class SimpleVersionHandler extends VersionHandler {
         if (dimension.equals(Dimension.THE_END)) return World.Environment.THE_END;
         if (dimension.equals(Dimension.THE_NETHER)) return World.Environment.NETHER;
         return World.Environment.CUSTOM;
+    }
+
+    private static WorldDimensions replaceBiomeSource(
+            final ResourceKey<LevelStem> key,
+            final HolderLookup.Provider registries,
+            final Map<ResourceKey<LevelStem>, LevelStem> dimensions,
+            final net.kyori.adventure.key.Key biomeKey
+    ) {
+        final var biomeRegistry = registries.lookupOrThrow(Registries.BIOME);
+        final var resourceKey = ResourceKey.create(Registries.BIOME,
+                Identifier.fromNamespaceAndPath(biomeKey.namespace(), biomeKey.value()));
+        final var biomeHolder = biomeRegistry.getOrThrow(resourceKey);
+        final var levelStem = dimensions.get(key);
+        if (levelStem == null) return new WorldDimensions(dimensions);
+        if (!(levelStem.generator() instanceof final NoiseBasedChunkGenerator noiseGen))
+            return new WorldDimensions(dimensions);
+        final var newGenerator = new NoiseBasedChunkGenerator(new FixedBiomeSource(biomeHolder), noiseGen.generatorSettings());
+        return replaceGenerator(key, registries, dimensions, newGenerator);
     }
 
     /**
