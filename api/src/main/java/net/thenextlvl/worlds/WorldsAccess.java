@@ -154,16 +154,6 @@ public interface WorldsAccess extends Plugin {
     CompletableFuture<Boolean> delete(World world);
 
     /**
-     * Schedules a world for deletion.
-     *
-     * @param world the world
-     * @return a future completing with {@code true} if the operation was scheduled
-     * @since 4.0.0
-     */
-    @Contract(mutates = "param1")
-    CompletableFuture<Boolean> scheduleDeletion(World world);
-
-    /**
      * Regenerates a world.
      *
      * @param world the world
@@ -183,16 +173,6 @@ public interface WorldsAccess extends Plugin {
      */
     @Contract(mutates = "param1")
     CompletableFuture<World> regenerate(World world, Consumer<Level.Builder> builder);
-
-    /**
-     * Schedules a world for regeneration.
-     *
-     * @param world the world
-     * @return a future completing with {@code true} if the operation was scheduled
-     * @since 4.0.0
-     */
-    @Contract(mutates = "param1")
-    CompletableFuture<Boolean> scheduleRegeneration(World world);
 
     /**
      * Creates a backup for a world.
@@ -215,37 +195,6 @@ public interface WorldsAccess extends Plugin {
      */
     @Contract(mutates = "param1")
     CompletableFuture<World> restoreBackup(World world, Backup backup);
-
-    /**
-     * Schedules a backup restoration for a world.
-     *
-     * @param world  the world
-     * @param backup the backup to restore
-     * @return a future completing with {@code true} if the operation was scheduled
-     * @since 4.0.0
-     */
-    @Contract(mutates = "param1")
-    CompletableFuture<Boolean> scheduleBackupRestoration(World world, Backup backup);
-
-    /**
-     * Checks whether a world is enabled.
-     *
-     * @param world the world
-     * @return {@code true} if the world is enabled
-     * @since 4.0.0
-     */
-    @Contract(pure = true)
-    boolean isEnabled(World world);
-
-    /**
-     * Sets whether a world is enabled.
-     *
-     * @param world   the world
-     * @param enabled whether the world is enabled
-     * @since 4.0.0
-     */
-    @Contract(mutates = "param1")
-    void setEnabled(World world, boolean enabled);
 
     /**
      * Returns the permission required to enter a world.
