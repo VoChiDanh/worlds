@@ -19,13 +19,13 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 @NullMarked
-final class WorldBackupPurgeCommand extends SimpleCommand {
-    private WorldBackupPurgeCommand(final WorldsPlugin plugin) {
-        super(plugin, "purge", "worlds.command.backup.purge");
+final class WorldBackupPruneCommand extends SimpleCommand {
+    private WorldBackupPruneCommand(final WorldsPlugin plugin) {
+        super(plugin, "prune", "worlds.command.backup.prune");
     }
 
     public static ArgumentBuilder<CommandSourceStack, ?> create(final WorldsPlugin plugin) {
-        final var command = new WorldBackupPurgeCommand(plugin);
+        final var command = new WorldBackupPruneCommand(plugin);
         final var age = Commands.argument("age", DurationArgumentType.duration(Duration.ofMinutes(1)));
         return command.create().then(age.executes(command));
     }
@@ -41,15 +41,15 @@ final class WorldBackupPurgeCommand extends SimpleCommand {
                     .filter(backup -> backup.createdAt().isBefore(threshold))
                     .toList();
             if (expired.isEmpty()) {
-                plugin.bundle().sendMessage(sender, "world.backup.purge.empty", duration(age));
+                plugin.bundle().sendMessage(sender, "world.backup.prune.empty", duration(age));
                 return;
             }
-            purge(sender, age, expired);
+            prune(sender, age, expired);
         });
         return SINGLE_SUCCESS;
     }
 
-    private void purge(final CommandSender sender, final Duration age, final List<Backup> backups) {
+    private void prune(final CommandSender sender, final Duration age, final List<Backup> backups) {
         final var futures = backups.stream()
                 .map(backup -> backup.provider().delete(backup))
                 .toList();
@@ -57,7 +57,7 @@ final class WorldBackupPurgeCommand extends SimpleCommand {
             final var deleted = futures.stream()
                     .filter(CompletableFuture::join)
                     .count();
-            plugin.bundle().sendMessage(sender, "world.backup.purge.success", duration(age,
+            plugin.bundle().sendMessage(sender, "world.backup.prune.success", duration(age,
                     Formatter.number("amount", deleted),
                     Formatter.booleanChoice("singular", deleted == 1)));
         });
