@@ -299,7 +299,7 @@ public final class SimpleVersionHandler extends VersionHandler {
         final var duplicate = server.getWorld(loadedWorldData.uuid());
         if (duplicate != null) return CompletableFuture.failedFuture(new WorldOperationException(
                 WorldOperationException.Reason.DUPLICATE_METADATA_UUID
-        ));
+        ).world(duplicate.key().asString()));
         // Worlds end
 
         final WorldGenSettings genSettingsFinal = worldGenSettings;
