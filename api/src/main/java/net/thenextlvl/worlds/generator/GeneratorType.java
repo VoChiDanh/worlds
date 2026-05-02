@@ -10,6 +10,12 @@ import org.jspecify.annotations.NullMarked;
 import java.util.stream.Stream;
 
 /**
+ * Represents a world generator configuration.
+ * <p>
+ * Generator types are identified by the underlying dimension generator key.
+ * Some generator types, such as {@link Flat} and {@link SingleBiome}, can
+ * create configured variants with a preset or biome.
+ *
  * @since 4.0.0
  */
 @NullMarked
@@ -84,7 +90,12 @@ public sealed interface GeneratorType extends Keyed permits SimpleGeneratorType 
         return key().equals(type.key());
     }
 
-    // todo: document
+    /**
+     * Returns the built-in generator types.
+     *
+     * @return a stream containing all generator types
+     * @since 4.0.0
+     */
     @Contract(pure = true)
     static Stream<GeneratorType> generatorTypes() {
         return Stream.of(AMPLIFIED, DEBUG, FLAT, LARGE_BIOMES, NORMAL, SINGLE_BIOME);
