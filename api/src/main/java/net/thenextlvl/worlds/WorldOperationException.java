@@ -12,14 +12,13 @@ public final class WorldOperationException extends RuntimeException {
     private final @Nullable Key key;
     private final @Nullable Path path;
     private final @Nullable String backup;
-    private final @Nullable String plugin;
 
     public WorldOperationException(final Reason reason) {
         this(reason, null);
     }
 
     public WorldOperationException(final Reason reason, @Nullable final Throwable cause) {
-        this(reason, cause, null, null, null, null, null);
+        this(reason, cause, null, null, null, null);
     }
 
     private WorldOperationException(
@@ -28,8 +27,7 @@ public final class WorldOperationException extends RuntimeException {
             @Nullable final String world,
             @Nullable final Key key,
             @Nullable final Path path,
-            @Nullable final String backup,
-            @Nullable final String plugin
+            @Nullable final String backup
     ) {
         super(cause);
         this.reason = reason;
@@ -37,7 +35,6 @@ public final class WorldOperationException extends RuntimeException {
         this.key = key;
         this.path = path;
         this.backup = backup;
-        this.plugin = plugin;
     }
 
     public Reason reason() {
@@ -60,28 +57,24 @@ public final class WorldOperationException extends RuntimeException {
         return backup;
     }
 
-    public @Nullable String plugin() {
-        return plugin;
-    }
-
     public WorldOperationException world(final String world) {
-        return new WorldOperationException(reason, getCause(), world, key, path, backup, plugin);
+        return new WorldOperationException(reason, getCause(), world, key, path, backup);
     }
 
     public WorldOperationException key(final Key key) {
-        return new WorldOperationException(reason, getCause(), world, key, path, backup, plugin);
+        return new WorldOperationException(reason, getCause(), world, key, path, backup);
     }
 
     public WorldOperationException path(final Path path) {
-        return new WorldOperationException(reason, getCause(), world, key, path, backup, plugin);
+        return new WorldOperationException(reason, getCause(), world, key, path, backup);
     }
 
     public WorldOperationException backup(final String backup) {
-        return new WorldOperationException(reason, getCause(), world, key, path, backup, plugin);
+        return new WorldOperationException(reason, getCause(), world, key, path, backup);
     }
 
     public WorldOperationException plugin(final String plugin) {
-        return new WorldOperationException(reason, getCause(), world, key, path, backup, plugin);
+        return new WorldOperationException(reason, getCause(), world, key, path, backup);
     }
 
     public enum Reason implements Translatable {

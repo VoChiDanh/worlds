@@ -67,7 +67,7 @@ public final class CommandFailureHandler {
                 .ifPresent(backup -> builder.resolver(Placeholder.parsed("backup", backup)));
         exception.map(WorldOperationException::world)
                 .ifPresent(world -> builder.resolver(Placeholder.parsed("world", world)));
-        exception.map(WorldOperationException::plugin).or(() -> generator.map(GeneratorException::getPlugin))
+        generator.map(GeneratorException::getPlugin)
                 .ifPresent(plugin -> builder.resolver(Placeholder.parsed("plugin", plugin)));
         Optional.ofNullable(throwable.getMessage())
                 .ifPresent(reason -> builder.resolver(Placeholder.parsed("reason", reason)));
