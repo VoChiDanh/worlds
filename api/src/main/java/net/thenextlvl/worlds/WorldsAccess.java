@@ -88,9 +88,7 @@ public interface WorldsAccess extends Plugin {
     String getEntryPermission(World world);
 
     @Contract(pure = true)
-    default ScheduledWorldOperations getScheduler() {
-        return SimpleScheduledWorldOperations.INSTANCE;
-    }
+    ScheduledWorldOperations getScheduler();
 
     @Contract(pure = true)
     BackupProvider getBackupProvider();

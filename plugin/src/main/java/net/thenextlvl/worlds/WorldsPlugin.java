@@ -67,6 +67,7 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
             .<PaperLevelView>map(support -> new FoliaLevelView(this, support))
             .orElseGet(() -> new PaperLevelView(this));
     private final SimpleWorldRegistry worldRegistry = new SimpleWorldRegistry(this);
+    private final SimpleScheduledWorldOperations worldOperationScheduler = new SimpleScheduledWorldOperations(this);
 
     private BackupProvider backupProvider = new SimpleBackupProvider();
 
@@ -376,7 +377,7 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
             if (!success) return CompletableFuture.failedFuture(new WorldOperationException(
                     WorldOperationException.Reason.UNLOAD_FAILED
             ).world(world.key().asString()).key(world.key()));
-            WorldFiles.delete(world.getWorldPath());
+            PaperLevelView.delete(world.getWorldPath());
             worldRegistry.unregister(world.key());
             getScheduler().cancel(world, WorldActionScheduledEvent.ActionType.DELETE);
             return CompletableFuture.completedFuture(true);
@@ -407,7 +408,7 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
                             WorldOperationException.Reason.UNLOAD_FAILED
                     ).world(world.key().asString()).key(world.key()));
 
-                    WorldFiles.regenerate(world.getWorldPath());
+                    PaperLevelView.regenerate(world.getWorldPath());
                     getScheduler().cancel(world, WorldActionScheduledEvent.ActionType.REGENERATE);
                     final var builder = Level.copy(world);
                     consumer.accept(builder);
@@ -444,6 +445,11 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
     @Override
     public String getEntryPermission(final World world) {
         return "worlds.enter." + world.key().asString();
+    }
+
+    @Override
+    public ScheduledWorldOperations getScheduler() {
+        return worldOperationScheduler;
     }
 
     @Override

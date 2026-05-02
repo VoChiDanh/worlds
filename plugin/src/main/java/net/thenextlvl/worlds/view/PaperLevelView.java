@@ -5,6 +5,7 @@ import net.kyori.adventure.key.KeyPattern;
 import net.thenextlvl.worlds.Level;
 import net.thenextlvl.worlds.WorldOperationException;
 import net.thenextlvl.worlds.WorldRegistry;
+import net.thenextlvl.worlds.WorldsAccess;
 import net.thenextlvl.worlds.WorldsPlugin;
 import net.thenextlvl.worlds.event.WorldCloneEvent;
 import org.bukkit.PortalType;
@@ -259,6 +260,24 @@ public class PaperLevelView {
         return name.toLowerCase()
                 .replaceAll("[^a-z0-9_\\-./ ]+", "")
                 .replace(" ", "_");
+    }
+
+    public static void regenerate(final Path level) {
+        delete(level.resolve("region"));
+        delete(level.resolve("entities"));
+        delete(level.resolve("poi"));
+    }
+
+    public static void delete(final Path path) {
+        try {
+            if (!Files.isDirectory(path)) Files.deleteIfExists(path);
+            else try (final var files = Files.list(path)) {
+                files.forEach(PaperLevelView::delete);
+                Files.deleteIfExists(path);
+            }
+        } catch (final IOException e) {
+            WorldsAccess.access().getComponentLogger().warn("Failed to delete {}", path, e);
+        }
     }
 
     public CompletableFuture<World> cloneAsync(final World world, final Consumer<Level.Builder> builder, final boolean full) {

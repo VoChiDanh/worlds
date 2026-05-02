@@ -4,13 +4,15 @@ import net.kyori.adventure.key.Key;
 import net.kyori.adventure.key.Keyed;
 import net.thenextlvl.worlds.event.WorldActionScheduledEvent;
 import org.bukkit.World;
+import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Contract;
 
 import java.nio.file.Path;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
-public sealed interface ScheduledWorldOperations permits SimpleScheduledWorldOperations {
+@ApiStatus.NonExtendable
+public interface ScheduledWorldOperations {
     @Contract(pure = true)
     Stream<Operation> operations();
 
@@ -43,7 +45,8 @@ public sealed interface ScheduledWorldOperations permits SimpleScheduledWorldOpe
     @Contract(mutates = "this")
     void runScheduledOperations();
 
-    sealed interface Operation extends Keyed, Runnable permits SimpleScheduledWorldOperations.Operation {
+    @ApiStatus.NonExtendable
+    interface Operation extends Keyed, Runnable {
         @Contract(pure = true)
         WorldActionScheduledEvent.ActionType type();
     }

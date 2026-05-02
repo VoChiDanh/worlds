@@ -2,7 +2,8 @@ package net.thenextlvl.worlds;
 
 import net.kyori.adventure.key.Key;
 import net.thenextlvl.worlds.event.WorldActionScheduledEvent;
-import org.bukkit.World;
+import net.thenextlvl.worlds.view.PaperLevelView;
+import org.bukkit.World;import org.jspecify.annotations.NullMarked;
 
 import java.nio.file.Path;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -11,11 +12,13 @@ import java.util.stream.Stream;
 
 import static net.thenextlvl.worlds.event.WorldActionScheduledEvent.ActionType;
 
+@NullMarked
 final class SimpleScheduledWorldOperations implements ScheduledWorldOperations {
-    public static final SimpleScheduledWorldOperations INSTANCE = new SimpleScheduledWorldOperations();
     private final CopyOnWriteArraySet<ScheduledWorldOperations.Operation> operations = new CopyOnWriteArraySet<>();
+    private final WorldsPlugin plugin;
 
-    private SimpleScheduledWorldOperations() {
+    public SimpleScheduledWorldOperations(final WorldsPlugin plugin) {
+        this.plugin = plugin;
     }
 
     @Override
@@ -55,14 +58,14 @@ final class SimpleScheduledWorldOperations implements ScheduledWorldOperations {
     @Override
     public boolean scheduleDeletion(final World world) {
         return schedule(world, WorldActionScheduledEvent.ActionType.DELETE, path -> {
-            WorldFiles.delete(path);
-            WorldsAccess.access().getWorldRegistry().unregister(world.key());
+            PaperLevelView.delete(path);
+            plugin.getWorldRegistry().unregister(world.key());
         });
     }
 
     @Override
     public boolean scheduleRegeneration(final World world) {
-        return schedule(world, WorldActionScheduledEvent.ActionType.REGENERATE, WorldFiles::regenerate);
+        return schedule(world, WorldActionScheduledEvent.ActionType.REGENERATE, PaperLevelView::regenerate);
     }
 
     @Override
