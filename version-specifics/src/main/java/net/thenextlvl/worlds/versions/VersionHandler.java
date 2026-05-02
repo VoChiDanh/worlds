@@ -2,7 +2,7 @@ package net.thenextlvl.worlds.versions;
 
 import net.thenextlvl.worlds.Dimension;
 import net.thenextlvl.worlds.Level;
-import net.thenextlvl.worlds.experimental.GeneratorType;
+import net.thenextlvl.worlds.generator.GeneratorType;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Entity;
