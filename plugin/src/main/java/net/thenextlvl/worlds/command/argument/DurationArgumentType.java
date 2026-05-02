@@ -81,6 +81,12 @@ public class DurationArgumentType implements CustomArgumentType<Duration, String
 
     @Override
     public <S> CompletableFuture<Suggestions> listSuggestions(final CommandContext<S> context, final SuggestionsBuilder builder) {
+        if (builder.getRemaining().isEmpty()) return builder
+                .suggest("90d")
+                .suggest("30d")
+                .suggest("24h")
+                .buildFuture();
+
         final var reader = new StringReader(builder.getRemaining());
 
         try {
