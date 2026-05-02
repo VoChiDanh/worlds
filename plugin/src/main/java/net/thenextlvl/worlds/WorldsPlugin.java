@@ -387,24 +387,23 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
             ));
 
         final var players = world.getPlayers();
-        return movePlayersToOverworld(world).thenCompose(ignored -> levelView.saveLevelDataAsync(world)
-                .thenCompose(ignored1 -> unload(world, false).thenCompose(success -> {
-                    if (!success) return CompletableFuture.failedFuture(new WorldOperationException(
-                            WorldOperationException.Reason.UNLOAD_FAILED
-                    ).world(world.key().asString()));
+        return movePlayersToOverworld(world).thenCompose(ignored -> unload(world, false).thenCompose(success -> {
+            if (!success) return CompletableFuture.failedFuture(new WorldOperationException(
+                    WorldOperationException.Reason.UNLOAD_FAILED
+            ).world(world.key().asString()));
 
-                    PaperLevelView.regenerate(world.getWorldPath());
-                    getScheduler().cancel(world, WorldActionScheduledEvent.ActionType.REGENERATE);
-                    final var builder = Level.copy(world).resetSpawnPosition(true);
-                    consumer.accept(builder);
-                    final var level = builder.build();
-                    return level.create().thenApply(regenerated -> {
-                        players.forEach(player -> player.teleportAsync(
-                                regenerated.getSpawnLocation(), PlayerTeleportEvent.TeleportCause.PLUGIN
-                        ));
-                        return regenerated;
-                    });
-                })));
+            PaperLevelView.regenerate(world.getWorldPath());
+            getScheduler().cancel(world, WorldActionScheduledEvent.ActionType.REGENERATE);
+            final var builder = Level.copy(world).resetSpawnPosition(true);
+            consumer.accept(builder);
+            final var level = builder.build();
+            return level.create().thenApply(regenerated -> {
+                players.forEach(player -> player.teleportAsync(
+                        regenerated.getSpawnLocation(), PlayerTeleportEvent.TeleportCause.PLUGIN
+                ));
+                return regenerated;
+            });
+        }));
     }
 
     private CompletableFuture<Void> movePlayersToOverworld(final World world) {
