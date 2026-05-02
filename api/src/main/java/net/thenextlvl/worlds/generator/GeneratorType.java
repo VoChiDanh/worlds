@@ -3,7 +3,6 @@ package net.thenextlvl.worlds.generator;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.key.Keyed;
 import net.thenextlvl.worlds.preset.Preset;
-import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Contract;
 import org.jspecify.annotations.NullMarked;
 
@@ -19,7 +18,6 @@ import java.util.stream.Stream;
  * @since 4.0.0
  */
 @NullMarked
-@ApiStatus.Experimental
 public sealed interface GeneratorType extends Keyed permits SimpleGeneratorType {
     /**
      * Represents the "amplified" generator type.
