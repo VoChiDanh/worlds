@@ -263,9 +263,20 @@ public class PaperLevelView {
     }
 
     public static void regenerate(final Path level) {
-        delete(level.resolve("region"));
+        final var data = level.resolve("data");
+
+        final var minecraft = data.resolve("minecraft");
+        delete(minecraft.resolve("raids.dat"));
+        delete(minecraft.resolve("weather.dat"));
+        delete(minecraft.resolve("world_border.dat"));
+        delete(minecraft.resolve("world_clocks.dat"));
+        delete(minecraft.resolve("world_gen_settings.dat"));
+        final var paper = data.resolve("paper");
+        delete(paper.resolve("level_overrides.dat"));
+
         delete(level.resolve("entities"));
         delete(level.resolve("poi"));
+        delete(level.resolve("region"));
     }
 
     public static void delete(final Path path) {
