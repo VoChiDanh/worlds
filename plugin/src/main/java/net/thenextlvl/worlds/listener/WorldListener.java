@@ -25,10 +25,8 @@ public final class WorldListener implements Listener {
 
         if (plugin.levelView().isNether(event.getWorld())) {
             plugin.getWorldRegistry().registerIfAbsent(event.getWorld().key(), Dimension.THE_NETHER, true, null);
-            return;
         } else if (plugin.levelView().isEnd(event.getWorld())) {
             plugin.getWorldRegistry().registerIfAbsent(event.getWorld().key(), Dimension.THE_END, true, null);
-            return;
         }
 
         if (!plugin.levelView().isOverworld(event.getWorld())) return;
@@ -51,14 +49,8 @@ public final class WorldListener implements Listener {
     private void loadLevel(final Key key, final WorldRegistry.Entry entry) {
         final var level = plugin.levelView().read(key, entry).build();
 
-        if (plugin.getServer().getWorld(level.key()) != null) {
-            plugin.getComponentLogger().warn("Skip loading dimension '{}' because another world with the same key is already loaded", level.key());
-            return;
-        }
-        if (plugin.getServer().getWorld(level.getName()) != null) {
-            plugin.getComponentLogger().warn("Skip loading dimension '{}' because another world with the same name is already loaded", level.getName());
-            return;
-        }
+        if (plugin.getServer().getWorld(level.key()) != null) return;
+        if (plugin.getServer().getWorld(level.getName()) != null) return;
 
         level.create().thenAccept(world -> plugin.getComponentLogger().debug(
                 "Loaded dimension {} ({}) from {}",
