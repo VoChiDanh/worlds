@@ -395,7 +395,7 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
 
                     PaperLevelView.regenerate(world.getWorldPath());
                     getScheduler().cancel(world, WorldActionScheduledEvent.ActionType.REGENERATE);
-                    final var builder = Level.copy(world);
+                    final var builder = Level.copy(world).resetSpawnPosition(true);
                     consumer.accept(builder);
                     final var level = builder.build();
                     return level.create().thenApply(regenerated -> {
