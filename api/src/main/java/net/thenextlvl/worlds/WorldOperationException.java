@@ -73,10 +73,6 @@ public final class WorldOperationException extends RuntimeException {
         return new WorldOperationException(reason, getCause(), world, key, path, backup);
     }
 
-    public WorldOperationException plugin(final String plugin) {
-        return new WorldOperationException(reason, getCause(), world, key, path, backup);
-    }
-
     public enum Reason implements Translatable {
         WORLD_KEY_EXISTS("world.failure.key-exists"),
         WORLD_NAME_EXISTS("world.failure.name-exists"),
@@ -86,7 +82,6 @@ public final class WorldOperationException extends RuntimeException {
         DUPLICATE_METADATA_UUID("world.failure.duplicate-uuid"),
         MISSING_LEVEL_STEM("world.failure.missing-level-stem"),
         LEGACY_MIGRATION_FAILED("world.failure.legacy-migration"),
-        MEMOIZATION_FAILED("world.failure.internal"),
         GENERATOR_PLUGIN_MISSING("world.failure.generator-missing"),
         GENERATOR_PLUGIN_DISABLED("world.failure.generator-disabled"),
         GENERATOR_PLUGIN_HAS_NO_GENERATOR("world.failure.generator-empty"),
@@ -94,7 +89,6 @@ public final class WorldOperationException extends RuntimeException {
         BACKUP_DIRECTORY_FAILED("world.failure.backup-directory"),
         BACKUP_WRITE_FAILED("world.failure.backup-write"),
         BACKUP_READ_FAILED("world.failure.backup-read"),
-        BACKUP_ZIP_FAILED("world.failure.backup-write"),
         BACKUP_RESTORE_FAILED("world.backup.restore.failed"),
         SAVE_FAILED("world.failure.save"),
         EVENT_CANCELLED("world.failure.cancelled"),

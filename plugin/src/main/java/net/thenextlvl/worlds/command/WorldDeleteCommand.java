@@ -60,7 +60,7 @@ final class WorldDeleteCommand extends SimpleCommand {
                         Placeholder.parsed("world", world.key().asString()));
             } else CommandFailureHandler.handle(plugin, context.getSource().getSender(), new WorldOperationException(
                     WorldOperationException.Reason.EVENT_CANCELLED
-            ).world(world.key().asString()).key(world.key()), Placeholder.parsed("world", world.key().asString()));
+            ));
         }).exceptionally(throwable -> {
             CommandFailureHandler.handle(plugin, context.getSource().getSender(), throwable,
                     Placeholder.parsed("world", world.key().asString()));

@@ -182,7 +182,7 @@ public final class SimpleVersionHandler extends VersionHandler {
             if (Files.exists(directory) && !Files.isDirectory(directory)) {
                 return CompletableFuture.failedFuture(new WorldOperationException(
                         WorldOperationException.Reason.TARGET_PATH_IS_FILE
-                ).path(directory).key(key).world(name));
+                ));
             }
 
             if (server.getWorld(key) != null) return CompletableFuture.failedFuture(new WorldOperationException(
@@ -195,7 +195,7 @@ public final class SimpleVersionHandler extends VersionHandler {
             if (plugin.getServer().getWorlds().stream().map(World::getWorldPath).anyMatch(directory::equals))
                 return CompletableFuture.failedFuture(new WorldOperationException(
                         WorldOperationException.Reason.WORLD_DIRECTORY_LOADED
-                ).key(key).path(directory).world(name));
+                ));
         } catch (final RuntimeException e) {
             return CompletableFuture.failedFuture(e);
         }
@@ -232,7 +232,7 @@ public final class SimpleVersionHandler extends VersionHandler {
         if (configuredStem == null) {
             return CompletableFuture.failedFuture(new WorldOperationException(
                     WorldOperationException.Reason.MISSING_LEVEL_STEM
-            ).key(key).world(name)); // Worlds - complete exceptionally
+            )); // Worlds - complete exceptionally
         }
         try {
             WorldFolderMigration.migrateApiWorld(
@@ -246,7 +246,7 @@ public final class SimpleVersionHandler extends VersionHandler {
             return CompletableFuture.failedFuture(new WorldOperationException(
                     WorldOperationException.Reason.LEGACY_MIGRATION_FAILED,
                     ex
-            ).key(key).world(name)); // Worlds - complete exceptionally
+            )); // Worlds - complete exceptionally
         }
         PaperWorldLoader.LoadedWorldData loadedWorldData = PaperWorldLoader.loadWorldData(
                 console,
@@ -282,7 +282,7 @@ public final class SimpleVersionHandler extends VersionHandler {
             if (complete.dimensions().getValue(actualDimension) == null) {
                 return CompletableFuture.failedFuture(new WorldOperationException(
                         WorldOperationException.Reason.MISSING_LEVEL_STEM
-                ).key(key).world(name)); // Worlds - complete exceptionally
+                )); // Worlds - complete exceptionally
             }
 
             worldGenSettings = new WorldGenSettings(worldOptions, worldDimensions);
@@ -298,11 +298,9 @@ public final class SimpleVersionHandler extends VersionHandler {
 
         // Worlds start - check world uuid availability
         final var duplicate = server.getWorld(loadedWorldData.uuid());
-        if (duplicate != null) return CompletableFuture.failedFuture(
-                new WorldOperationException(
-                        WorldOperationException.Reason.DUPLICATE_METADATA_UUID
-                ).key(key).world(name)
-        );
+        if (duplicate != null) return CompletableFuture.failedFuture(new WorldOperationException(
+                WorldOperationException.Reason.DUPLICATE_METADATA_UUID
+        ));
         // Worlds end
 
         final WorldGenSettings genSettingsFinal = worldGenSettings;
@@ -321,7 +319,7 @@ public final class SimpleVersionHandler extends VersionHandler {
         if (customStem == null) {
             return CompletableFuture.failedFuture(new WorldOperationException(
                     WorldOperationException.Reason.MISSING_LEVEL_STEM
-            ).key(key).world(name)); // Worlds - complete exceptionally
+            )); // Worlds - complete exceptionally
         }
 
         final var environment = toEnvironment(level.getDimension()); // Worlds - get environment from dimension
@@ -358,9 +356,7 @@ public final class SimpleVersionHandler extends VersionHandler {
 
         // Worlds start - ensure world is memoized before adding to server
         if (server.getWorld(name) == null) return CompletableFuture.failedFuture(
-                new WorldOperationException(
-                        WorldOperationException.Reason.MEMOIZATION_FAILED
-                ).key(key).world(name)
+                new WorldOperationException(WorldOperationException.Reason.INTERNAL_ERROR)
         );
         // Worlds end
 

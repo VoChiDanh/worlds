@@ -304,7 +304,7 @@ public class PaperLevelView {
                     Files.isDirectory(clone.getDirectory())
                             ? WorldOperationException.Reason.WORLD_PATH_EXISTS
                             : WorldOperationException.Reason.TARGET_PATH_IS_FILE
-            ).path(clone.getDirectory());
+            );
         } catch (final RuntimeException e) {
             return CompletableFuture.failedFuture(e);
         }
@@ -318,8 +318,7 @@ public class PaperLevelView {
                 return clone.create();
             } catch (final IOException e) {
                 return CompletableFuture.failedFuture(new WorldOperationException(
-                        WorldOperationException.Reason.BACKUP_WRITE_FAILED,
-                        e
+                        WorldOperationException.Reason.BACKUP_WRITE_FAILED, e
                 ).key(clone.key()).world(clone.getName()).path(clone.getDirectory()));
             }
         }) : clone.create();

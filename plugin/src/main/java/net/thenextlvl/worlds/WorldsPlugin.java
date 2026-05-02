@@ -267,7 +267,7 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
                 .map(Level::create)
                 .orElseGet(() -> CompletableFuture.failedFuture(new WorldOperationException(
                         WorldOperationException.Reason.WORLD_NOT_FOUND
-                ).world(key.asString()).key(key)));
+                ).world(key.asString())));
     }
 
     @Override
@@ -335,11 +335,11 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
         return supplyGlobal(() -> {
             if (levelView.isOverworld(world)) return CompletableFuture.failedFuture(new WorldOperationException(
                     WorldOperationException.Reason.BACKUP_RESTORE_REQUIRES_SCHEDULING
-            ).world(world.key().asString()).key(world.key()).backup(backup.name()));
+            ));
             if (!new WorldBackupRestoreEvent(world, backup).callEvent())
                 return CompletableFuture.failedFuture(new WorldOperationException(
                         WorldOperationException.Reason.EVENT_CANCELLED
-                ).world(world.key().asString()).key(world.key()).backup(backup.name()));
+                ));
             final var players = List.copyOf(world.getPlayers());
             return movePlayersToOverworld(world).thenCompose(ignored -> getBackupProvider().restore(world, backup)
                     .thenApply(restored -> {
@@ -368,15 +368,15 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
     private CompletableFuture<Boolean> deleteNow(final World world) {
         if (levelView.isOverworld(world)) return CompletableFuture.failedFuture(new WorldOperationException(
                 WorldOperationException.Reason.DELETE_REQUIRES_SCHEDULING
-        ).world(world.key().asString()).key(world.key()));
+        ));
         if (!new WorldDeleteEvent(world).callEvent()) return CompletableFuture.failedFuture(new WorldOperationException(
                 WorldOperationException.Reason.EVENT_CANCELLED
-        ).world(world.key().asString()).key(world.key()));
+        ));
 
         return movePlayersToOverworld(world).thenCompose(ignored -> unload(world, false).thenCompose(success -> {
             if (!success) return CompletableFuture.failedFuture(new WorldOperationException(
                     WorldOperationException.Reason.UNLOAD_FAILED
-            ).world(world.key().asString()).key(world.key()));
+            ).world(world.key().asString()));
             PaperLevelView.delete(world.getWorldPath());
             worldRegistry.unregister(world.key());
             getScheduler().cancel(world, WorldActionScheduledEvent.ActionType.DELETE);
@@ -395,18 +395,18 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
     private CompletableFuture<World> regenerateNow(final World world, final Consumer<Level.Builder> consumer) {
         if (levelView.isOverworld(world)) return CompletableFuture.failedFuture(new WorldOperationException(
                 WorldOperationException.Reason.REGENERATE_REQUIRES_SCHEDULING
-        ).world(world.key().asString()).key(world.key()));
+        ));
         if (!new WorldRegenerateEvent(world).callEvent())
             return CompletableFuture.failedFuture(new WorldOperationException(
                     WorldOperationException.Reason.EVENT_CANCELLED
-            ).world(world.key().asString()).key(world.key()));
+            ));
 
         final var players = world.getPlayers();
         return movePlayersToOverworld(world).thenCompose(ignored -> levelView.saveLevelDataAsync(world)
                 .thenCompose(ignored1 -> unload(world, false).thenCompose(success -> {
                     if (!success) return CompletableFuture.failedFuture(new WorldOperationException(
                             WorldOperationException.Reason.UNLOAD_FAILED
-                    ).world(world.key().asString()).key(world.key()));
+                    ).world(world.key().asString()));
 
                     PaperLevelView.regenerate(world.getWorldPath());
                     getScheduler().cancel(world, WorldActionScheduledEvent.ActionType.REGENERATE);

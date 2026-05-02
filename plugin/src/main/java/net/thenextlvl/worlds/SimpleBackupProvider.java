@@ -45,7 +45,7 @@ public class SimpleBackupProvider implements BackupProvider {
             if (!success) {
                 return CompletableFuture.failedFuture(new WorldOperationException(
                         WorldOperationException.Reason.UNLOAD_FAILED
-                ).world(worldKey.asString()).key(worldKey));
+                ).world(worldKey.asString()));
             }
             restoreNow(worldKey, backup);
             WorldsAccess.access().getScheduler().cancel(world, WorldActionScheduledEvent.ActionType.RESTORE_BACKUP);
@@ -148,9 +148,7 @@ public class SimpleBackupProvider implements BackupProvider {
         final var fileName = name != null ? name + ".zip" : findAvailableName(folder, timestamp);
         final var backupPath = folder.resolve(fileName);
         if (name != null && Files.isRegularFile(backupPath)) {
-            throw new WorldOperationException(
-                    WorldOperationException.Reason.BACKUP_NAME_EXISTS
-            ).key(world.key()).world(world.key().asString()).backup(name).path(backupPath);
+            throw new WorldOperationException(WorldOperationException.Reason.BACKUP_NAME_EXISTS).backup(name);
         }
         try (final var output = new ZipOutputStream(new BufferedOutputStream(Files.newOutputStream(
                 backupPath, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE
@@ -168,10 +166,10 @@ public class SimpleBackupProvider implements BackupProvider {
                 }
             });
         } catch (final IOException e) {
+            final var backup = name != null ? name : fileName.substring(0, fileName.length() - 4);
             throw new WorldOperationException(
-                    WorldOperationException.Reason.BACKUP_ZIP_FAILED,
-                    e
-            ).key(world.key()).world(world.key().asString()).backup(name != null ? name : fileName.substring(0, fileName.length() - 4)).path(backupPath);
+                    WorldOperationException.Reason.BACKUP_WRITE_FAILED, e
+            ).key(world.key()).world(world.key().asString()).backup(backup).path(backupPath);
         }
         try {
             final var attrs = Files.readAttributes(backupPath, BasicFileAttributes.class);
