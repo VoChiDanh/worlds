@@ -14,7 +14,7 @@ public class PresetsTest {
     @MethodSource("unparsedPresets")
     public void testPreset(final Preset preset, final String unparsed) {
         final var parsed = Preset.fromString(unparsed);
-        assertEquals(parsed.asString(), unparsed, "Parsed preset does not match unparsed preset");
+        assertEquals(preset.asString(), parsed.asString(), "Parsed preset does not match unparsed preset");
     }
 
     @ParameterizedTest
