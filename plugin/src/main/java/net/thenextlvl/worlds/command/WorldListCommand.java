@@ -134,7 +134,7 @@ final class WorldListCommand extends SimpleCommand {
             return plugin.bundle().component(state.translationKey, sender, placeholders)
                     .hoverEvent(HoverEvent.showText(plugin.bundle().component(state.hoverKey, sender,
                             Placeholder.parsed("world", key))))
-                    .clickEvent(ClickEvent.runCommand(state.command + key));
+                    .clickEvent(ClickEvent.suggestCommand(state.command + key));
         }
 
         private Component label() {
