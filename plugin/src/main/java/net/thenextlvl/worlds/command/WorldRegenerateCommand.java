@@ -48,26 +48,32 @@ final class WorldRegenerateCommand extends SimpleCommand {
 
     @Override
     public int run(final CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        final var sender = context.getSource().getSender();
         final var flags = context.getArgument("flags", CommandFlagsArgument.Flags.class);
         if (!flags.contains("--confirm")) return confirmationNeeded(context);
+
         final var world = context.getArgument("world", World.class);
         final var schedule = flags.contains("--schedule");
-        if (!schedule) plugin.bundle().sendMessage(context.getSource().getSender(), "world.regenerate",
+
+        if (!schedule) plugin.bundle().sendMessage(sender, "world.regenerate",
                 Placeholder.parsed("world", world.key().asString()));
-        final var future = schedule ? (!flags.contains("--seed")
-                                       ? plugin.regenerate(world, builder -> builder.seed(null).resetSpawnPosition(true))
-                                       : plugin.regenerate(world)).thenApply(ignored -> true)
-                : CompletableFuture.completedFuture(plugin.getScheduler().scheduleRegeneration(world));
+
+        final var future = !schedule ? plugin.regenerate(world, builder -> {
+            if (flags.contains("--seed")) builder.seed(null);
+        }).thenApply(ignored -> true) : CompletableFuture.completedFuture(
+                plugin.getScheduler().scheduleRegeneration(world)
+        );
+
         future.thenAccept(success -> {
             if (success) {
                 final var message = schedule ? "world.regenerate.scheduled" : "world.regenerate.success";
-                plugin.bundle().sendMessage(context.getSource().getSender(), message,
+                plugin.bundle().sendMessage(sender, message,
                         Placeholder.parsed("world", world.key().asString()));
-            } else CommandFailureHandler.handle(plugin, context.getSource().getSender(), new WorldOperationException(
+            } else CommandFailureHandler.handle(plugin, sender, new WorldOperationException(
                     WorldOperationException.Reason.EVENT_CANCELLED
             ));
         }).exceptionally(throwable -> {
-            CommandFailureHandler.handle(plugin, context.getSource().getSender(), throwable,
+            CommandFailureHandler.handle(plugin, sender, throwable,
                     Placeholder.parsed("world", world.key().asString()));
             return null;
         });
