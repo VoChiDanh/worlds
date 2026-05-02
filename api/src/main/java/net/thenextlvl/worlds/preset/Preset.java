@@ -1,10 +1,12 @@
 package net.thenextlvl.worlds.preset;
 
 import com.google.gson.JsonObject;
+import net.kyori.adventure.key.Key;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.Unmodifiable;
 import org.jspecify.annotations.Nullable;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -26,13 +28,13 @@ public sealed interface Preset permits SimplePreset {
     Optional<String> name();
 
     /**
-     * Retrieves the biome associated with the preset.
+     * Retrieves the biome key associated with the preset.
      *
-     * @return the biome as a {@code Biome} record
+     * @return the key of the biome used by the preset
      * @since 4.0.0
      */
     @Contract(pure = true)
-    Biome biome();
+    Key biome();
 
     /**
      * Determines whether lakes are enabled for the preset.
@@ -62,24 +64,24 @@ public sealed interface Preset permits SimplePreset {
     boolean decoration();
 
     /**
-     * Retrieves the set of layers associated with the preset.
+     * Retrieves the ordered layers associated with the preset.
      *
-     * @return a {@code Set} containing the layers of the preset
+     * @return an unmodifiable list containing the layers of the preset
      * @since 4.0.0
      */
     @Unmodifiable
     @Contract(pure = true)
-    Set<Layer> layers();
+    List<Layer> layers();
 
     /**
-     * Retrieves the set of structures associated with the preset.
+     * Retrieves the structure keys associated with the preset.
      *
-     * @return a {@code Set} containing the structures of the preset
+     * @return an unmodifiable set containing the keys of the preset structures
      * @since 4.0.0
      */
     @Unmodifiable
     @Contract(pure = true)
-    Set<Structure> structures();
+    Set<Key> structures();
 
     /**
      * Converts the current {@code Preset} object into its corresponding preset code.
@@ -199,14 +201,14 @@ public sealed interface Preset permits SimplePreset {
         Builder name(@Nullable String name);
 
         /**
-         * Sets the biome of the preset.
+         * Sets the biome key of the preset.
          *
-         * @param biome the biome to use
+         * @param biome the key of the biome to use
          * @return this builder
          * @since 4.0.0
          */
         @Contract(value = "_ -> this", mutates = "this")
-        Builder biome(Biome biome);
+        Builder biome(Key biome);
 
         /**
          * Sets whether decoration is enabled for the preset.
@@ -239,14 +241,14 @@ public sealed interface Preset permits SimplePreset {
         Builder lakes(boolean lakes);
 
         /**
-         * Sets the layers of the preset, replacing any previously added layers.
+         * Sets the ordered layers of the preset, replacing any previously added layers.
          *
-         * @param layers the set of layers
+         * @param layers the ordered list of layers
          * @return this builder
          * @since 4.0.0
          */
         @Contract(value = "_ -> this", mutates = "this")
-        Builder layers(Set<Layer> layers);
+        Builder layers(List<Layer> layers);
 
         /**
          * Adds a layer to the preset.
@@ -259,24 +261,24 @@ public sealed interface Preset permits SimplePreset {
         Builder addLayer(final Layer layer);
 
         /**
-         * Sets the structures of the preset, replacing any previously added structures.
+         * Sets the structure keys of the preset, replacing any previously added structures.
          *
-         * @param structures the set of structures
+         * @param structures the set of structure keys
          * @return this builder
          * @since 4.0.0
          */
         @Contract(value = "_ -> this", mutates = "this")
-        Builder structures(Set<Structure> structures);
+        Builder structures(Set<Key> structures);
 
         /**
-         * Adds a structure to the preset.
+         * Adds a structure key to the preset.
          *
-         * @param structure the structure to add
+         * @param structure the structure key to add
          * @return this builder
          * @since 4.0.0
          */
         @Contract(value = "_ -> this", mutates = "this")
-        Builder addStructure(final Structure structure);
+        Builder addStructure(final Key structure);
 
         /**
          * Builds and returns the {@link Preset} instance.
