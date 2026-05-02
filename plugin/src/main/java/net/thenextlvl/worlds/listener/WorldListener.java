@@ -25,8 +25,10 @@ public final class WorldListener implements Listener {
 
         if (plugin.levelView().isNether(event.getWorld())) {
             plugin.getWorldRegistry().registerIfAbsent(event.getWorld().key(), Dimension.THE_NETHER, true, null);
+            return;
         } else if (plugin.levelView().isEnd(event.getWorld())) {
             plugin.getWorldRegistry().registerIfAbsent(event.getWorld().key(), Dimension.THE_END, true, null);
+            return;
         }
 
         if (!plugin.levelView().isOverworld(event.getWorld())) return;
