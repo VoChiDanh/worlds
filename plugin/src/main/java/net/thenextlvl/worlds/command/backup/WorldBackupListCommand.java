@@ -5,8 +5,6 @@ import com.mojang.brigadier.context.CommandContext;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.event.ClickEvent;
-import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.minimessage.tag.resolver.Formatter;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
@@ -103,14 +101,10 @@ final class WorldBackupListCommand extends SimpleCommand {
 
         private Component component(final WorldsPlugin plugin, final CommandSender sender, final boolean last) {
             final var world = key().asString();
-            return plugin.bundle().component("world.backup.list.entry", sender, resolvers(last))
-                    .hoverEvent(HoverEvent.showText(plugin.bundle().component("world.backup.list.hover", sender,
-                            Placeholder.parsed("world", world),
-                            Placeholder.parsed("backup", backup.name()))))
-                    .clickEvent(ClickEvent.suggestCommand("/world backup restore " + world + " " + backup.name()));
+            return plugin.bundle().component("world.backup.list.entry", sender, resolvers(last, world));
         }
 
-        private TagResolver[] resolvers(final boolean last) {
+        private TagResolver[] resolvers(final boolean last, final String world) {
             final var bytes = backup.size();
             final var kb = bytes / 1024d;
             final var mb = kb / 1024d;
@@ -127,6 +121,7 @@ final class WorldBackupListCommand extends SimpleCommand {
             return new TagResolver[]{
                     Placeholder.parsed("tree", last ? "└" : "├"),
                     Placeholder.parsed("backup", backup.name()),
+                    Placeholder.parsed("world", world),
                     Formatter.number("size", gb >= 1 ? gb : mb >= 1 ? mb : kb >= 1 ? kb : bytes),
                     Formatter.choice("unit", gb >= 1 ? 0 : mb >= 1 ? 1 : kb >= 1 ? 2 : 3),
                     Formatter.number("time", years >= 1 ? years : months >= 1 ? months : weeks >= 1 ? weeks : days >= 1 ? days : hours >= 1 ? hours : minutes >= 1 ? minutes : seconds),
