@@ -395,7 +395,7 @@ public final class SimpleVersionHandler extends VersionHandler {
             final ResourceKey<LevelStem> key,
             final HolderLookup.Provider registries,
             final Map<ResourceKey<LevelStem>, LevelStem> dimensions,
-            final net.kyori.adventure.key.Key biomeKey
+            final Key biomeKey
     ) {
         final var biomeRegistry = registries.lookupOrThrow(Registries.BIOME);
         final var resourceKey = ResourceKey.create(Registries.BIOME,

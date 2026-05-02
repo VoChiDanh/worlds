@@ -84,9 +84,8 @@ final class WorldBackupRestoreCommand extends SimpleCommand {
                     plugin.bundle().sendMessage(context.getSource().getSender(), message,
                             Placeholder.parsed("world", world.key().asString()),
                             Placeholder.parsed("backup", backup.name()));
-                } else CommandFailureHandler.handle(plugin, context.getSource().getSender(), new WorldOperationException(
-                        WorldOperationException.Reason.EVENT_CANCELLED
-                ));
+                } else CommandFailureHandler.handle(plugin, context.getSource().getSender(),
+                        new WorldOperationException(WorldOperationException.Reason.EVENT_CANCELLED));
             }).exceptionally(throwable -> {
                 CommandFailureHandler.handle(plugin, context.getSource().getSender(), throwable, Placeholder.parsed("world", world.key().asString()),
                         Placeholder.parsed("backup", backup.name()));
