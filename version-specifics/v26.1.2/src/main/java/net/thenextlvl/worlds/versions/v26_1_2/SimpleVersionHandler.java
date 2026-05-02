@@ -4,6 +4,7 @@ import ca.spottedleaf.moonrise.common.util.TickThread;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.gson.JsonObject;
 import io.papermc.paper.FeatureHooks;
 import io.papermc.paper.math.Rotation;
 import io.papermc.paper.plugin.provider.classloader.ConfiguredPluginClassLoader;
@@ -55,9 +56,7 @@ import net.minecraft.world.level.storage.SavedDataStorage;
 import net.thenextlvl.worlds.Dimension;
 import net.thenextlvl.worlds.Level;
 import net.thenextlvl.worlds.WorldOperationException;
-import net.thenextlvl.worlds.generator.BiomeSource;
 import net.thenextlvl.worlds.generator.GeneratorType;
-import net.thenextlvl.worlds.preset.Preset;
 import net.thenextlvl.worlds.versions.PluginAccess;
 import net.thenextlvl.worlds.versions.VersionHandler;
 import org.bukkit.Location;
@@ -261,20 +260,20 @@ public final class SimpleVersionHandler extends VersionHandler {
         if (worldGenSettings == null) {
             final WorldOptions worldOptions = new WorldOptions(level.getSeed(), level.hasStructures(), level.hasBonusChest());
 
-            final var generatorSettings = level.getPreset().orElse(Preset.CLASSIC_FLAT).toJson(); // Worlds - serialize preset
-            final var levelType = level.getGeneratorType().presetName().asString(); // Worlds - get actual level type name
+            final var generatorType = level.getGeneratorType();
+            final var generatorSettings = generatorType instanceof final GeneratorType.Flat flat ? flat.preset().toJson() : new JsonObject(); // Worlds - serialize preset
+            final var levelType = getGeneratorTypeName(level.getGeneratorType()).asString(); // Worlds - get actual level type name
             final DedicatedServerProperties.WorldDimensionData properties = new DedicatedServerProperties.WorldDimensionData(generatorSettings, levelType);
             WorldDimensions worldDimensions = properties.create(context.datapackWorldgen());
 
             // Worlds start - replace generators and biome source
-            if (level.getGeneratorType().equals(GeneratorType.FLAT) || level.getGeneratorType().equals(GeneratorType.DEBUG)) {
+            if (level.getGeneratorType().is(GeneratorType.FLAT) || level.getGeneratorType().is(GeneratorType.DEBUG)) {
                 worldDimensions = replaceGenerator(LevelStem.NETHER, context.datapackWorldgen(), worldDimensions.dimensions(), worldDimensions.overworld());
                 worldDimensions = replaceGenerator(LevelStem.END, context.datapackWorldgen(), worldDimensions.dimensions(), worldDimensions.overworld());
             }
 
-            final var biomeSource = level.getBiomeSource().orElse(null);
-            if (level.getGeneratorType().equals(GeneratorType.SINGLE_BIOME) && biomeSource instanceof final BiomeSource.FixedBiomeSource fixed) {
-                worldDimensions = replaceBiomeSource(actualDimension, context.datapackWorldgen(), worldDimensions.dimensions(), fixed.biome());
+            if (generatorType instanceof final GeneratorType.SingleBiome singleBiome) {
+                worldDimensions = replaceBiomeSource(actualDimension, context.datapackWorldgen(), worldDimensions.dimensions(), singleBiome.biome());
             }
             // Worlds end
 
@@ -382,6 +381,13 @@ public final class SimpleVersionHandler extends VersionHandler {
         console.prepareLevel(serverLevel);
 
         return CompletableFuture.completedFuture(serverLevel.getWorld());
+    }
+
+    private Key getGeneratorTypeName(final GeneratorType generatorType) {
+        if (generatorType.is(GeneratorType.DEBUG)) return Key.key("debug_all_block_states");
+        if (generatorType.is(GeneratorType.SINGLE_BIOME)) return Key.key("single_biome_surface");
+        if (generatorType.is(GeneratorType.NORMAL)) return Key.key("normal");
+        return generatorType.key();
     }
 
     private World.Environment toEnvironment(final Dimension dimension) {

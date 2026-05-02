@@ -75,7 +75,7 @@ final class WorldRecreateCommand extends OptionCommand {
         tryGetArgument(context, "hardcore", Boolean.class).ifPresent(builder::hardcore);
         tryGetArgument(context, "key", Key.class).ifPresentOrElse(builder::key, () ->
                 builder.key(plugin.levelView().findFreeKey(world.key())));
-        tryGetArgument(context, "preset", Preset.class).ifPresent(builder::preset);
+        tryGetArgument(context, "preset", Preset.class).map(GeneratorType.FLAT::with).ifPresent(builder::generatorType);
         tryGetArgument(context, "seed", Long.class).ifPresent(builder::seed);
         tryGetArgument(context, "structures", Boolean.class).ifPresent(builder::structures);
         tryGetArgument(context, "type", GeneratorType.class).ifPresent(builder::generatorType);

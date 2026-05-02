@@ -3,10 +3,8 @@ package net.thenextlvl.worlds;
 import io.papermc.paper.math.Position;
 import io.papermc.paper.math.Rotation;
 import net.kyori.adventure.key.Key;
-import net.thenextlvl.worlds.generator.BiomeSource;
 import net.thenextlvl.worlds.generator.GeneratorType;
 import net.thenextlvl.worlds.generator.Generator;
-import net.thenextlvl.worlds.preset.Preset;
 import org.bukkit.World;
 import org.bukkit.generator.BiomeProvider;
 import org.bukkit.generator.ChunkGenerator;
@@ -28,9 +26,7 @@ final class SimpleLevel implements Level {
     private final @Nullable BiomeProvider biomeProvider;
     private final @Nullable ChunkGenerator chunkGenerator;
 
-    private final @Nullable BiomeSource biomeSource;
     private final @Nullable Generator generator;
-    private final @Nullable Preset preset;
 
     private final @Nullable Position spawnPositionOverride;
     private final @Nullable Rotation spawnRotationOverride;
@@ -49,8 +45,6 @@ final class SimpleLevel implements Level {
         this.name = builder.name().orElseGet(() -> builder.key().value());
 
         this.dimension = builder.dimension().orElse(Dimension.OVERWORLD);
-        this.biomeSource = builder.biomeSource().orElse(null);
-
         this.hardcore = builder.hardcore().orElseGet(server::isHardcore);
         this.seed = builder.seed().orElseGet(ThreadLocalRandom.current()::nextLong);
         this.structures = builder.structures().orElseGet(server::getGenerateStructures);
@@ -62,14 +56,11 @@ final class SimpleLevel implements Level {
         this.resetSpawnPosition = builder.resetSpawnPosition().orElse(false);
 
         this.generator = builder.generator;
-        this.preset = builder.preset;
 
         this.biomeProvider = builder.generator().flatMap(generator -> generator.biomeProvider(name)).orElse(null);
         this.chunkGenerator = builder.generator().flatMap(generator -> generator.generator(name)).orElse(null);
 
-        this.generatorType = builder.generatorType().orElseGet(() -> {
-            return builder.preset().isPresent() ? GeneratorType.FLAT : GeneratorType.NORMAL;
-        });
+        this.generatorType = builder.generatorType().orElse(GeneratorType.NORMAL);
     }
 
     @Override
@@ -113,11 +104,6 @@ final class SimpleLevel implements Level {
     }
 
     @Override
-    public Optional<BiomeSource> getBiomeSource() {
-        return Optional.ofNullable(biomeSource);
-    }
-
-    @Override
     public Optional<Generator> getGenerator() {
         return Optional.ofNullable(generator);
     }
@@ -130,11 +116,6 @@ final class SimpleLevel implements Level {
     @Override
     public Optional<BiomeProvider> getBiomeProvider() {
         return Optional.ofNullable(biomeProvider);
-    }
-
-    @Override
-    public Optional<Preset> getPreset() {
-        return Optional.ofNullable(preset);
     }
 
     @Override
@@ -166,7 +147,6 @@ final class SimpleLevel implements Level {
                 .generatorType(generatorType)
                 .hardcore(hardcore)
                 .name(name)
-                .preset(preset)
                 .seed(seed)
                 .structures(structures);
     }
@@ -194,14 +174,12 @@ final class SimpleLevel implements Level {
         private @Nullable Boolean hardcore;
         private @Nullable Boolean resetSpawnPosition;
         private @Nullable Boolean structures;
-        private @Nullable BiomeSource biomeSource;
         private @Nullable Dimension dimension;
         private @Nullable Generator generator;
         private @Nullable GeneratorType generatorType;
         private @Nullable Long seed;
         private @Nullable Position spawnPositionOverride;
         private @Nullable Rotation spawnRotationOverride;
-        private @Nullable Preset preset;
         private @Nullable String name;
         private Key key;
 
@@ -228,17 +206,6 @@ final class SimpleLevel implements Level {
         @Override
         public Level.Builder dimension(final @Nullable Dimension dimension) {
             this.dimension = dimension;
-            return this;
-        }
-
-        @Override
-        public Optional<BiomeSource> biomeSource() {
-            return Optional.ofNullable(biomeSource);
-        }
-
-        @Override
-        public Level.Builder biomeSource(@Nullable final BiomeSource source) {
-            this.biomeSource = source;
             return this;
         }
 
@@ -346,17 +313,6 @@ final class SimpleLevel implements Level {
         @Override
         public Level.Builder generator(@Nullable final Generator generator) {
             this.generator = generator;
-            return this;
-        }
-
-        @Override
-        public Optional<Preset> preset() {
-            return Optional.ofNullable(preset);
-        }
-
-        @Override
-        public Level.Builder preset(@Nullable final Preset preset) {
-            this.preset = preset;
             return this;
         }
 

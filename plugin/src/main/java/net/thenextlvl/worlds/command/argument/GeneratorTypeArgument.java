@@ -25,8 +25,10 @@ public final class GeneratorTypeArgument extends TooltipSuggestionProvider imple
 
     @Override
     public GeneratorType convert(final StringReader reader, final String type) {
-        return GeneratorType.getByName(type).orElseThrow(() ->
-                new IllegalArgumentException("Unknown dimension type"));
+        return GeneratorType.generatorTypes()
+                .filter(generatorType -> type.equals(generatorType.name()))
+                .findAny()
+                .orElseThrow(() -> new IllegalArgumentException("Unknown dimension type"));
     }
 
     @Override

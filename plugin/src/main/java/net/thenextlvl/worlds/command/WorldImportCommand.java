@@ -78,8 +78,7 @@ final class WorldImportCommand extends OptionCommand {
         final var build = Level.builder(key)
                 .name(displayName)
                 .generator(generator)
-                .generatorType(preset != null ? GeneratorType.FLAT : null)
-                .preset(preset)
+                .generatorType(preset != null ? GeneratorType.FLAT.with(preset) : null)
                 .dimension(dimension)
                 .build();
 

@@ -92,13 +92,14 @@ final class WorldCreateCommand extends OptionCommand {
         } else try {
             final var key = tryGetArgument(context, "key", Key.class)
                     .orElseGet(() -> plugin.levelView().findFreeKey(Key.key("worlds", createKey(name))));
+            final var preset = tryGetArgument(context, "preset", Preset.class).orElse(null);
+            final var type = tryGetArgument(context, "type", GeneratorType.class).orElse(null);
             return Level.builder(key)
                     .dimension(tryGetArgument(context, "dimension", Dimension.class).orElse(null))
                     .generator(tryGetArgument(context, "generator", Generator.class).orElse(null))
-                    .preset(tryGetArgument(context, "preset", Preset.class).orElse(null))
                     .seed(tryGetArgument(context, "seed", Long.class).orElse(null))
                     .structures(tryGetArgument(context, "structures", Boolean.class).orElse(null))
-                    .generatorType(tryGetArgument(context, "type", GeneratorType.class).orElse(null))
+                    .generatorType(preset != null ? GeneratorType.FLAT.with(preset) : type)
                     .bonusChest(tryGetArgument(context, "bonus-chest", Boolean.class).orElse(null))
                     .hardcore(tryGetArgument(context, "hardcore", Boolean.class).orElse(null))
                     .name(name)
