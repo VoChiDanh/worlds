@@ -131,10 +131,11 @@ final class WorldListCommand extends SimpleCommand {
                     Placeholder.parsed("tree", last ? "└" : "├"),
                     Placeholder.component("world", label()),
             };
+            final var suffix = state.equals(State.UNIMPORTED) ? " " : "";
             return plugin.bundle().component(state.translationKey, sender, placeholders)
                     .hoverEvent(HoverEvent.showText(plugin.bundle().component(state.hoverKey, sender,
                             Placeholder.parsed("world", key))))
-                    .clickEvent(ClickEvent.suggestCommand(state.command + key));
+                    .clickEvent(ClickEvent.suggestCommand(state.command + key + suffix));
         }
 
         private Component label() {
