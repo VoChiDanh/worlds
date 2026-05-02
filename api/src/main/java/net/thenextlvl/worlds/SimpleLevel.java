@@ -3,6 +3,7 @@ package net.thenextlvl.worlds;
 import io.papermc.paper.math.Position;
 import io.papermc.paper.math.Rotation;
 import net.kyori.adventure.key.Key;
+import net.thenextlvl.worlds.experimental.BiomeSource;
 import net.thenextlvl.worlds.experimental.GeneratorType;
 import net.thenextlvl.worlds.generator.Generator;
 import net.thenextlvl.worlds.preset.Preset;
@@ -27,6 +28,7 @@ final class SimpleLevel implements Level {
     private final @Nullable BiomeProvider biomeProvider;
     private final @Nullable ChunkGenerator chunkGenerator;
 
+    private final @Nullable BiomeSource biomeSource;
     private final @Nullable Generator generator;
     private final @Nullable Preset preset;
 
@@ -47,6 +49,7 @@ final class SimpleLevel implements Level {
         this.name = builder.name().orElseGet(() -> builder.key().value());
 
         this.dimension = builder.dimension().orElse(Dimension.OVERWORLD);
+        this.biomeSource = builder.biomeSource().orElse(null);
 
         this.hardcore = builder.hardcore().orElseGet(server::isHardcore);
         this.seed = builder.seed().orElseGet(ThreadLocalRandom.current()::nextLong);
@@ -107,6 +110,11 @@ final class SimpleLevel implements Level {
     @Override
     public GeneratorType getGeneratorType() {
         return generatorType;
+    }
+
+    @Override
+    public Optional<BiomeSource> getBiomeSource() {
+        return Optional.ofNullable(biomeSource);
     }
 
     @Override
@@ -186,6 +194,7 @@ final class SimpleLevel implements Level {
         private @Nullable Boolean hardcore;
         private @Nullable Boolean resetSpawnPosition;
         private @Nullable Boolean structures;
+        private @Nullable BiomeSource biomeSource;
         private @Nullable Dimension dimension;
         private @Nullable Generator generator;
         private @Nullable GeneratorType generatorType;
@@ -219,6 +228,17 @@ final class SimpleLevel implements Level {
         @Override
         public Level.Builder dimension(final @Nullable Dimension dimension) {
             this.dimension = dimension;
+            return this;
+        }
+
+        @Override
+        public Optional<BiomeSource> biomeSource() {
+            return Optional.ofNullable(biomeSource);
+        }
+
+        @Override
+        public Level.Builder biomeSource(@Nullable final BiomeSource source) {
+            this.biomeSource = source;
             return this;
         }
 

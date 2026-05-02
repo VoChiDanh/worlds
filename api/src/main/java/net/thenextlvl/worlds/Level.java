@@ -4,12 +4,14 @@ import io.papermc.paper.math.Position;
 import io.papermc.paper.math.Rotation;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.key.Keyed;
+import net.thenextlvl.worlds.experimental.BiomeSource;
 import net.thenextlvl.worlds.experimental.GeneratorType;
 import net.thenextlvl.worlds.generator.Generator;
 import net.thenextlvl.worlds.preset.Preset;
 import org.bukkit.World;
 import org.bukkit.generator.BiomeProvider;
 import org.bukkit.generator.ChunkGenerator;
+import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Contract;
 import org.jspecify.annotations.Nullable;
 
@@ -44,6 +46,9 @@ public sealed interface Level extends Keyed permits SimpleLevel {
 
     @Contract(pure = true)
     GeneratorType getGeneratorType();
+
+    @Contract(pure = true)
+    Optional<BiomeSource> getBiomeSource();
 
     @Contract(pure = true)
     Optional<Generator> getGenerator();
@@ -96,6 +101,14 @@ public sealed interface Level extends Keyed permits SimpleLevel {
 
         @Contract(mutates = "this")
         Builder dimension(@Nullable Dimension dimension);
+
+        @Contract(pure = true)
+        @ApiStatus.Experimental
+        Optional<BiomeSource> biomeSource();
+
+        @ApiStatus.Experimental
+        @Contract(mutates = "this")
+        Builder biomeSource(@Nullable BiomeSource source);
 
         @Contract(pure = true)
         OptionalLong seed();
