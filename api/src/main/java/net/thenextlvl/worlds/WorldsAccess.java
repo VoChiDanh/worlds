@@ -44,13 +44,14 @@ public interface WorldsAccess extends Plugin {
     WorldRegistry getWorldRegistry();
 
     /**
-     * Lists available dimensions.
+     * Lists all available custom dimensions.
      *
      * @return a stream of dimensions
+     * @see Dimension#dimensions()
      * @since 4.0.0
      */
     @Contract(pure = true)
-    Stream<Dimension> listDimensions();
+    Stream<Dimension> customDimensions();
 
     /**
      * Returns the dimension of a loaded world.

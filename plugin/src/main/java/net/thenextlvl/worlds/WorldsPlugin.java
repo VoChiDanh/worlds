@@ -241,7 +241,7 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
     }
 
     @Override
-    public Stream<Dimension> listDimensions() {
+    public Stream<Dimension> customDimensions() {
         return handler().listDimensions();
     }
 

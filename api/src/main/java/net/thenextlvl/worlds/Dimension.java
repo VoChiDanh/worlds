@@ -35,6 +35,7 @@ public record Dimension(Key key) implements Keyed {
      * Returns the built-in dimensions.
      *
      * @return a stream containing the overworld, nether, and end dimensions
+     * @see WorldsAccess#customDimensions()
      * @since 4.0.0
      */
     public static Stream<Dimension> dimensions() {

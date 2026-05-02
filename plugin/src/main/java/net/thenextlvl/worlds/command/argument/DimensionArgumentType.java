@@ -29,7 +29,7 @@ public final class DimensionArgumentType implements SimpleArgumentType<Dimension
 
     @Override
     public <S> CompletableFuture<Suggestions> listSuggestions(final CommandContext<S> context, final SuggestionsBuilder builder) {
-        Stream.concat(plugin.listDimensions(), Dimension.dimensions())
+        Stream.concat(plugin.customDimensions(), Dimension.dimensions())
                 .map(dimension -> dimension.key().asString())
                 .filter(s -> s.contains(builder.getRemaining()))
                 .forEach(builder::suggest);
