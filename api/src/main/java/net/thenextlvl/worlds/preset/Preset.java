@@ -39,7 +39,7 @@ public sealed interface Preset permits SimplePreset {
     /**
      * Determines whether lakes are enabled for the preset.
      *
-     * @return true if lakes are enabled, false otherwise
+     * @return {@code true} if lakes are enabled, {@code false} otherwise
      * @since 4.0.0
      */
     @Contract(pure = true)
@@ -48,7 +48,7 @@ public sealed interface Preset permits SimplePreset {
     /**
      * Determines whether features are enabled for the preset.
      *
-     * @return true if features are enabled, false otherwise
+     * @return {@code true} if features are enabled, {@code false} otherwise
      * @since 4.0.0
      */
     @Contract(pure = true)
@@ -57,7 +57,7 @@ public sealed interface Preset permits SimplePreset {
     /**
      * Determines whether decoration is enabled for the preset.
      *
-     * @return true if decoration is enabled, false otherwise
+     * @return {@code true} if decoration is enabled, {@code false} otherwise
      * @since 4.0.0
      */
     @Contract(pure = true)
@@ -213,7 +213,7 @@ public sealed interface Preset permits SimplePreset {
         /**
          * Sets whether decoration is enabled for the preset.
          *
-         * @param decoration true to enable decoration, false otherwise
+         * @param decoration {@code true} to enable decoration, {@code false} otherwise
          * @return this builder
          * @since 4.0.0
          */
@@ -223,7 +223,7 @@ public sealed interface Preset permits SimplePreset {
         /**
          * Sets whether features are enabled for the preset.
          *
-         * @param features true to enable features, false otherwise
+         * @param features {@code true} to enable features, {@code false} otherwise
          * @return this builder
          * @since 4.0.0
          */
@@ -233,7 +233,7 @@ public sealed interface Preset permits SimplePreset {
         /**
          * Sets whether lakes are enabled for the preset.
          *
-         * @param lakes true to enable lakes, false otherwise
+         * @param lakes {@code true} to enable lakes, {@code false} otherwise
          * @return this builder
          * @since 4.0.0
          */

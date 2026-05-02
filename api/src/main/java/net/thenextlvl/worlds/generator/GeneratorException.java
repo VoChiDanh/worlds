@@ -41,7 +41,7 @@ public final class GeneratorException extends IllegalStateException {
     /**
      * Retrieves the unique identifier associated with the generator exception.
      *
-     * @return a nullable string representing the ID of the generator, or null if no ID is provided
+     * @return a nullable string representing the ID of the generator, or {@code null} if no ID is provided
      * @since 4.0.0
      */
     @Contract(pure = true)

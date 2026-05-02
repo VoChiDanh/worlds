@@ -46,6 +46,7 @@ public final class WorldCloneEvent extends WorldEvent {
      * Retrieves the cloned {@link Level} associated with this event.
      *
      * @return the clone of the level involved in the cloning process
+     * @since 4.0.0
      */
     @Contract(pure = true)
     public Level getClone() {
@@ -57,9 +58,9 @@ public final class WorldCloneEvent extends WorldEvent {
      * The filter determines whether a specific file should be included in the cloning
      * based on its path and attributes.
      * <p>
-     * If the filter returns false, the corresponding file
+     * If the filter returns {@code false}, the corresponding file
      * or directory will not be included in the cloning process.
-     * Returning false for a directory skips the entire directory.
+     * Returning {@code false} for a directory skips the entire directory.
      * <p>
      * If multiple filters are added, they are combined logically such that filters
      * added later only evaluate if no earlier filter has disqualified the file for cloning.
@@ -68,6 +69,7 @@ public final class WorldCloneEvent extends WorldEvent {
      *               and returns {@code true} if the file should be included in the cloning process,
      *               {@code false} otherwise
      * @throws IllegalStateException if the event represents a non-{@link #isFullClone() full} clone operation
+     * @since 4.0.0
      */
     @Contract(mutates = "this")
     public void addFileFilter(final BiPredicate<Path, BasicFileAttributes> filter) throws IllegalStateException {
@@ -79,7 +81,8 @@ public final class WorldCloneEvent extends WorldEvent {
      * Indicates whether the entire world, including entities, data, regions, etc. will be cloned
      * or only the {@code level.dat} file, so that the world is just generated with the same config.
      *
-     * @return true if the entire world will be cloned, false, if only the {@code level.dat} file will be cloned
+     * @return {@code true} if the entire world will be cloned, {@code false}, if only the {@code level.dat} file will be cloned
+     * @since 4.0.0
      */
     @Contract(pure = true)
     public boolean isFullClone() {

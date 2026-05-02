@@ -35,6 +35,7 @@ public final class WorldActionScheduledEvent extends WorldEvent implements Cance
      * Retrieves the type of action scheduled to be performed on a world.
      *
      * @return the scheduled action type
+     * @since 4.0.0
      */
     @Contract(pure = true)
     public ActionType getActionType() {
@@ -64,18 +65,22 @@ public final class WorldActionScheduledEvent extends WorldEvent implements Cance
 
     /**
      * Represents the type of action scheduled to be performed on a {@link World}.
+     *
+     * @since 4.0.0
      */
     public enum ActionType {
         /**
          * This action is used to schedule the removal of a {@link World}.
          *
          * @see WorldDeleteEvent
+         * @since 4.0.0
          */
         DELETE,
         /**
          * This action is used to schedule the regeneration of a {@link World}.
          *
          * @see WorldRegenerateEvent
+         * @since 4.0.0
          */
         REGENERATE,
         /**

@@ -28,6 +28,12 @@ public final class WorldBackupRestoreEvent extends WorldEvent implements Cancell
         this.backup = backup;
     }
 
+    /**
+     * Returns the backup being restored.
+     *
+     * @return the backup being restored
+     * @since 4.0.0
+     */
     @Contract(pure = true)
     public Backup getBackup() {
         return backup;

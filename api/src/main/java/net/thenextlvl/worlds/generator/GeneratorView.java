@@ -14,6 +14,7 @@ public sealed interface GeneratorView permits SimpleGeneratorView {
      * Returns the singleton {@link GeneratorView} instance.
      *
      * @return the generator view instance
+     * @since 4.0.0
      */
     static GeneratorView view() {
         return SimpleGeneratorView.INSTANCE;
@@ -23,7 +24,8 @@ public sealed interface GeneratorView permits SimpleGeneratorView {
      * Checks whether the given plugin has an associated generator.
      *
      * @param plugin the plugin to check for an associated generator
-     * @return true if the plugin has a generator, otherwise false
+     * @return {@code true} if the plugin has a generator, otherwise {@code false}
+     * @since 4.0.0
      */
     @Contract(pure = true)
     boolean hasGenerator(Plugin plugin);
@@ -32,7 +34,8 @@ public sealed interface GeneratorView permits SimpleGeneratorView {
      * Checks if the specified plugin class has a declared method for generating custom chunk data.
      *
      * @param clazz the class of the plugin to check
-     * @return true if the plugin class overrides the method for providing a ChunkGenerator, otherwise false
+     * @return {@code true} if the plugin class overrides the method for providing a ChunkGenerator, otherwise {@code false}
+     * @since 4.0.0
      */
     @Contract(pure = true)
     boolean hasChunkGenerator(Class<? extends Plugin> clazz);
@@ -41,7 +44,8 @@ public sealed interface GeneratorView permits SimpleGeneratorView {
      * Checks if the specified plugin class has a declared method for providing a default biome provider.
      *
      * @param clazz the class of the plugin to check
-     * @return true if the plugin class overrides the method to provide a default biome provider, otherwise false
+     * @return {@code true} if the plugin class overrides the method to provide a default biome provider, otherwise {@code false}
+     * @since 4.0.0
      */
     @Contract(pure = true)
     boolean hasBiomeProvider(Class<? extends Plugin> clazz);

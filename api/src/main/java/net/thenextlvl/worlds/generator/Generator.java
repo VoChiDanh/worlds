@@ -73,7 +73,7 @@ public sealed interface Generator permits SimpleGenerator {
      * Creates a new generator for the given plugin and optional configuration id.
      *
      * @param plugin the plugin providing the generator
-     * @param id     the optional generator configuration id, or null for the default
+     * @param id     the optional generator configuration id, or {@code null} for the default
      * @return a new generator instance
      * @since 4.0.0
      */

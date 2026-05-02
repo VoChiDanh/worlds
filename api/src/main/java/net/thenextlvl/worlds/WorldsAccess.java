@@ -14,8 +14,19 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
+/**
+ * Main access point for world management services.
+ *
+ * @since 4.0.0
+ */
 @ApiStatus.NonExtendable
 public interface WorldsAccess extends Plugin {
+    /**
+     * Returns the active worlds plugin access instance.
+     *
+     * @return the access instance
+     * @since 4.0.0
+     */
     static @CheckReturnValue WorldsAccess access() {
         final class Cache {
             private static final WorldsAccess INSTANCE = StaticBinder.getInstance(WorldsAccess.class.getClassLoader()).find(WorldsAccess.class);
@@ -23,82 +34,272 @@ public interface WorldsAccess extends Plugin {
         return Cache.INSTANCE;
     }
 
+    /**
+     * Returns the world registry.
+     *
+     * @return the world registry
+     * @since 4.0.0
+     */
     @Contract(pure = true)
     WorldRegistry getWorldRegistry();
 
+    /**
+     * Lists available dimensions.
+     *
+     * @return a stream of dimensions
+     * @since 4.0.0
+     */
     @Contract(pure = true)
     Stream<Dimension> listDimensions();
 
+    /**
+     * Returns the dimension of a loaded world.
+     *
+     * @param world the world
+     * @return the world's dimension
+     * @since 4.0.0
+     */
     @Contract(pure = true)
     Dimension getDimension(World world);
 
+    /**
+     * Returns the root level directory.
+     *
+     * @return the root level directory
+     * @since 4.0.0
+     */
     @Contract(pure = true)
     Path getLevelDirectory();
 
+    /**
+     * Lists known level directories.
+     *
+     * @return a stream of level paths
+     * @since 4.0.0
+     */
     @Contract(pure = true)
     Stream<Path> listLevels();
 
+    /**
+     * Loads a world by key.
+     *
+     * @param key the world key
+     * @return a future completing with the loaded world
+     * @since 4.0.0
+     */
     CompletableFuture<World> load(Key key);
 
+    /**
+     * Creates a world from a level description.
+     *
+     * @param level the level description
+     * @return a future completing with the created world
+     * @since 4.0.0
+     */
     CompletableFuture<World> create(Level level);
 
+    /**
+     * Unloads a world.
+     *
+     * @param world the world
+     * @param save  whether to save before unloading
+     * @return a future completing with {@code true} if the world was unloaded
+     * @since 4.0.0
+     */
     @Contract(mutates = "param1")
     CompletableFuture<Boolean> unload(World world, boolean save);
 
+    /**
+     * Saves a world.
+     *
+     * @param world the world
+     * @param flush whether to flush data to disk
+     * @return a future completing with {@code true} if the world was saved
+     * @since 4.0.0
+     */
     @Contract(mutates = "param1")
     CompletableFuture<Boolean> save(World world, boolean flush);
 
+    /**
+     * Clones a world.
+     *
+     * @param world the world to clone
+     * @param full  whether to clone all world files
+     * @return a future completing with the cloned world
+     * @since 4.0.0
+     */
     @Contract(mutates = "param1")
     CompletableFuture<World> clone(World world, boolean full);
 
+    /**
+     * Clones a world with builder customization.
+     *
+     * @param world   the world to clone
+     * @param builder the builder customizer
+     * @param full    whether to clone all world files
+     * @return a future completing with the cloned world
+     * @since 4.0.0
+     */
     @Contract(mutates = "param1")
     CompletableFuture<World> clone(World world, Consumer<Level.Builder> builder, boolean full);
 
+    /**
+     * Deletes a world.
+     *
+     * @param world the world
+     * @return a future completing with {@code true} if the world was deleted
+     * @since 4.0.0
+     */
     @Contract(mutates = "param1")
     CompletableFuture<Boolean> delete(World world);
 
+    /**
+     * Schedules a world for deletion.
+     *
+     * @param world the world
+     * @return a future completing with {@code true} if the operation was scheduled
+     * @since 4.0.0
+     */
     @Contract(mutates = "param1")
     CompletableFuture<Boolean> scheduleDeletion(World world);
 
+    /**
+     * Regenerates a world.
+     *
+     * @param world the world
+     * @return a future completing with the regenerated world
+     * @since 4.0.0
+     */
     @Contract(mutates = "param1")
     CompletableFuture<World> regenerate(World world);
 
+    /**
+     * Regenerates a world with builder customization.
+     *
+     * @param world   the world
+     * @param builder the builder customizer
+     * @return a future completing with the regenerated world
+     * @since 4.0.0
+     */
     @Contract(mutates = "param1")
     CompletableFuture<World> regenerate(World world, Consumer<Level.Builder> builder);
 
+    /**
+     * Schedules a world for regeneration.
+     *
+     * @param world the world
+     * @return a future completing with {@code true} if the operation was scheduled
+     * @since 4.0.0
+     */
     @Contract(mutates = "param1")
     CompletableFuture<Boolean> scheduleRegeneration(World world);
 
+    /**
+     * Creates a backup for a world.
+     *
+     * @param world the world
+     * @param name  the backup name, or {@code null}
+     * @return a future completing with the created backup
+     * @since 4.0.0
+     */
     @Contract(mutates = "param1")
     CompletableFuture<Backup> createBackup(World world, @Nullable String name);
 
+    /**
+     * Restores a backup into a world.
+     *
+     * @param world  the world
+     * @param backup the backup to restore
+     * @return a future completing with the restored world
+     * @since 4.0.0
+     */
     @Contract(mutates = "param1")
     CompletableFuture<World> restoreBackup(World world, Backup backup);
 
+    /**
+     * Schedules a backup restoration for a world.
+     *
+     * @param world  the world
+     * @param backup the backup to restore
+     * @return a future completing with {@code true} if the operation was scheduled
+     * @since 4.0.0
+     */
     @Contract(mutates = "param1")
     CompletableFuture<Boolean> scheduleBackupRestoration(World world, Backup backup);
 
+    /**
+     * Checks whether a world is enabled.
+     *
+     * @param world the world
+     * @return {@code true} if the world is enabled
+     * @since 4.0.0
+     */
     @Contract(pure = true)
     boolean isEnabled(World world);
 
+    /**
+     * Sets whether a world is enabled.
+     *
+     * @param world   the world
+     * @param enabled whether the world is enabled
+     * @since 4.0.0
+     */
     @Contract(mutates = "param1")
     void setEnabled(World world, boolean enabled);
 
+    /**
+     * Returns the permission required to enter a world.
+     *
+     * @param world the world
+     * @return the entry permission
+     * @since 4.0.0
+     */
     @Contract(pure = true)
     String getEntryPermission(World world);
 
+    /**
+     * Returns the scheduled operation manager.
+     *
+     * @return the scheduler
+     * @since 4.0.0
+     */
     @Contract(pure = true)
     ScheduledWorldOperations getScheduler();
 
+    /**
+     * Returns the backup provider.
+     *
+     * @return the backup provider
+     * @since 4.0.0
+     */
     @Contract(pure = true)
     BackupProvider getBackupProvider();
 
+    /**
+     * Sets the backup provider.
+     *
+     * @param provider the backup provider
+     * @since 4.0.0
+     */
     @Contract(mutates = "this")
     void setBackupProvider(BackupProvider provider);
 
+    /**
+     * Returns the dimensions root directory.
+     *
+     * @return the dimensions root directory
+     * @since 4.0.0
+     */
     @Contract(pure = true)
     Path getDimensionsRoot();
 
+    /**
+     * Resolves the level directory for a world key.
+     *
+     * @param key the world key
+     * @return the level directory
+     * @since 4.0.0
+     */
     @Contract(pure = true)
     Path resolveLevelDirectory(Key key);
 }
