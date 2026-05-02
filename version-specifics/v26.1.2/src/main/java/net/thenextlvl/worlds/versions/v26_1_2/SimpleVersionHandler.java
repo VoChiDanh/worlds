@@ -360,7 +360,7 @@ public final class SimpleVersionHandler extends VersionHandler {
         // Worlds end
 
         // Worlds start - setInitialized(false) to reevaluate spawn position, construct WorldCreator for explicit override
-        if (level.resetSpawnPosition()) primaryLevelData.setInitialized(false);
+        if (level.resetSpawnPosition()) serverLevel.serverLevelData.setInitialized(false);
 
         final var worldCreator = level.getForcedSpawnPosition().map(position -> {
             final var worldKey = new NamespacedKey(level.key().namespace(), level.key().value());
