@@ -14,6 +14,7 @@ import org.bukkit.World;
 import org.jspecify.annotations.NullMarked;
 
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 import static net.thenextlvl.worlds.command.WorldCommand.worldArgument;
 
@@ -50,7 +51,8 @@ final class WorldDeleteCommand extends SimpleCommand {
         if (!flags.contains("--confirm")) return confirmationNeeded(context);
         final var world = context.getArgument("world", World.class);
         final var schedule = flags.contains("--schedule");
-        final var future = schedule ? plugin.scheduleDeletion(world) : plugin.delete(world);
+        final var future = !schedule ? plugin.delete(world)
+                : CompletableFuture.completedFuture(plugin.getScheduler().scheduleDeletion(world));
         if (!schedule) plugin.bundle().sendMessage(context.getSource().getSender(), "world.delete",
                 Placeholder.parsed("world", world.key().asString()));
         future.thenAccept(success -> {

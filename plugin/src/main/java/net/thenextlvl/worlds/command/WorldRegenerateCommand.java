@@ -15,6 +15,7 @@ import org.bukkit.World;
 import org.jspecify.annotations.NullMarked;
 
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 import static net.thenextlvl.worlds.command.WorldCommand.worldArgument;
 
@@ -53,9 +54,10 @@ final class WorldRegenerateCommand extends SimpleCommand {
         final var schedule = flags.contains("--schedule");
         if (!schedule) plugin.bundle().sendMessage(context.getSource().getSender(), "world.regenerate",
                 Placeholder.parsed("world", world.key().asString()));
-        final var future = schedule ? plugin.scheduleRegeneration(world) : plugin.regenerate(world, builder -> {
-            if (flags.contains("--seed")) builder.seed(null).resetSpawnPosition(true);
-        }).thenApply(ignored -> true);
+        final var future = schedule ? (!flags.contains("--seed")
+                                       ? plugin.regenerate(world, builder -> builder.seed(null).resetSpawnPosition(true))
+                                       : plugin.regenerate(world)).thenApply(ignored -> true)
+                : CompletableFuture.completedFuture(plugin.getScheduler().scheduleRegeneration(world));
         future.thenAccept(success -> {
             if (success) {
                 final var message = schedule ? "world.regenerate.scheduled" : "world.regenerate.success";

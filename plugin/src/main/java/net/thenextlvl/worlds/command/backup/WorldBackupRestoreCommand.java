@@ -17,6 +17,7 @@ import org.bukkit.World;
 import org.jspecify.annotations.NullMarked;
 
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 import static net.thenextlvl.worlds.command.WorldCommand.worldArgument;
 
@@ -76,8 +77,8 @@ final class WorldBackupRestoreCommand extends SimpleCommand {
                 return;
             }
 
-            final var future = schedule ? plugin.scheduleBackupRestoration(world, backup)
-                    : plugin.restoreBackup(world, backup).thenApply(ignored -> true);
+            final var future = !schedule ? plugin.restoreBackup(world, backup).thenApply(ignored -> true)
+                    : CompletableFuture.completedFuture(plugin.getScheduler().scheduleBackupRestoration(world, backup));
             future.thenAccept(success -> {
                 if (success) {
                     final var message = schedule ? "world.backup.restore.scheduled" : "world.backup.restore.success";

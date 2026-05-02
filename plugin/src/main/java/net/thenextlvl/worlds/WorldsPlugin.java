@@ -302,11 +302,6 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
     }
 
     @Override
-    public CompletableFuture<Boolean> scheduleDeletion(final World world) {
-        return supplyGlobal(() -> CompletableFuture.completedFuture(getScheduler().scheduleDeletion(world)));
-    }
-
-    @Override
     public CompletableFuture<World> regenerate(final World world) {
         return regenerate(world, builder -> {
         });
@@ -315,11 +310,6 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
     @Override
     public CompletableFuture<World> regenerate(final World world, final Consumer<Level.Builder> builder) {
         return supplyGlobal(() -> regenerateNow(world, builder));
-    }
-
-    @Override
-    public CompletableFuture<Boolean> scheduleRegeneration(final World world) {
-        return supplyGlobal(() -> CompletableFuture.completedFuture(getScheduler().scheduleRegeneration(world)));
     }
 
     @Override
@@ -358,11 +348,6 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
                         });
                     }));
         });
-    }
-
-    @Override
-    public CompletableFuture<Boolean> scheduleBackupRestoration(final World world, final Backup backup) {
-        return supplyGlobal(() -> CompletableFuture.completedFuture(getScheduler().scheduleBackupRestoration(world, backup)));
     }
 
     private CompletableFuture<Boolean> deleteNow(final World world) {
@@ -430,16 +415,6 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
                     if (!success) player.kick(bundle().component("world.unload.kicked", player));
                 }))
                 .toArray(CompletableFuture[]::new));
-    }
-
-    @Override
-    public boolean isEnabled(final World world) {
-        return worldRegistry.isEnabled(world.key());
-    }
-
-    @Override
-    public void setEnabled(final World world, final boolean enabled) {
-        worldRegistry.setEnabled(world.key(), enabled);
     }
 
     @Override
