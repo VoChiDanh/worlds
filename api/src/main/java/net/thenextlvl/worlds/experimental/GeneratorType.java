@@ -17,36 +17,48 @@ public record GeneratorType(Key key, String name) implements Keyed {
     /**
      * Represents the "amplified" generator type.
      * <a href="https://minecraft.wiki/w/Amplified">Wiki</a>
+     *
+     * @since 4.0.0
      */
     public static final GeneratorType AMPLIFIED = new GeneratorType(Key.key("minecraft", "amplified"), "amplified");
 
     /**
      * Represents the "debug" generator type.
      * <a href="https://minecraft.wiki/w/Dimension_definition#debug">Wiki</a>
+     *
+     * @since 4.0.0
      */
     public static final GeneratorType DEBUG = new GeneratorType(Key.key("minecraft", "debug"), "debug");
 
     /**
      * Represents the "flat" generator type.
      * <a href="https://minecraft.wiki/w/Dimension_definition#flat">Wiki</a>
+     *
+     * @since 4.0.0
      */
     public static final GeneratorType FLAT = new GeneratorType(Key.key("minecraft", "flat"), "flat");
 
     /**
      * Represents the "large_biomes" generator type.
      * <a href="https://minecraft.wiki/w/Large_Biomes">Wiki</a>
+     *
+     * @since 4.0.0
      */
     public static final GeneratorType LARGE_BIOMES = new GeneratorType(Key.key("minecraft", "large_biomes"), "large-biomes");
 
     /**
      * Represents the "noise" generator type.
      * <a href="https://minecraft.wiki/w/Dimension_definition#noise">Wiki</a>
+     *
+     * @since 4.0.0
      */
     public static final GeneratorType NORMAL = new GeneratorType(Key.key("minecraft", "noise"), "normal");
 
     /**
      * Represents the "noise" generator type.
      * <a href="https://minecraft.wiki/w/Dimension_definition#fixed">Wiki</a>
+     *
+     * @since 4.0.0
      */
     public static final GeneratorType SINGLE_BIOME = new GeneratorType(Key.key("minecraft", "fixed"), "single-biome");
 

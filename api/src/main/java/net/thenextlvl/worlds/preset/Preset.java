@@ -39,7 +39,7 @@ public sealed interface Preset permits SimplePreset {
     /**
      * Determines whether lakes are enabled for the preset.
      *
-     * @return true if lakes are enabled, false otherwise
+     * @return {@code true} if lakes are enabled, {@code false} otherwise
      * @since 4.0.0
      */
     @Contract(pure = true)
@@ -48,7 +48,7 @@ public sealed interface Preset permits SimplePreset {
     /**
      * Determines whether features are enabled for the preset.
      *
-     * @return true if features are enabled, false otherwise
+     * @return {@code true} if features are enabled, {@code false} otherwise
      * @since 4.0.0
      */
     @Contract(pure = true)
@@ -57,7 +57,7 @@ public sealed interface Preset permits SimplePreset {
     /**
      * Determines whether decoration is enabled for the preset.
      *
-     * @return true if decoration is enabled, false otherwise
+     * @return {@code true} if decoration is enabled, {@code false} otherwise
      * @since 4.0.0
      */
     @Contract(pure = true)
@@ -129,7 +129,8 @@ public sealed interface Preset permits SimplePreset {
      *
      * @param string the preset code string to parse in the expected format
      * @return a {@code Preset} object configured with the layers and biome described in the preset code
-     * @throws IllegalArgumentException if the preset code contains invalid materials or does not adhere to the required format
+     * @throws IllegalArgumentException if the preset code contains invalid materials,
+     *                                  invalid layer heights, or does not adhere to the required format
      * @since 4.0.0
      */
     @Contract(value = "_ -> new", pure = true)
@@ -143,7 +144,7 @@ public sealed interface Preset permits SimplePreset {
      *
      * @param json the JSON object to deserialize
      * @return the deserialized preset
-     * @throws IllegalArgumentException if no layers are provided
+     * @throws IllegalArgumentException if required preset data is missing or invalid
      * @see #toJson()
      * @since 4.0.0
      */
@@ -213,7 +214,7 @@ public sealed interface Preset permits SimplePreset {
         /**
          * Sets whether decoration is enabled for the preset.
          *
-         * @param decoration true to enable decoration, false otherwise
+         * @param decoration {@code true} to enable decoration, {@code false} otherwise
          * @return this builder
          * @since 4.0.0
          */
@@ -223,7 +224,7 @@ public sealed interface Preset permits SimplePreset {
         /**
          * Sets whether features are enabled for the preset.
          *
-         * @param features true to enable features, false otherwise
+         * @param features {@code true} to enable features, {@code false} otherwise
          * @return this builder
          * @since 4.0.0
          */
@@ -233,7 +234,7 @@ public sealed interface Preset permits SimplePreset {
         /**
          * Sets whether lakes are enabled for the preset.
          *
-         * @param lakes true to enable lakes, false otherwise
+         * @param lakes {@code true} to enable lakes, {@code false} otherwise
          * @return this builder
          * @since 4.0.0
          */
