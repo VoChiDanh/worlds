@@ -478,14 +478,14 @@ public final class SimpleVersionHandler extends VersionHandler {
         final var registry = console.worldLoaderContext.datapackDimensions().lookupOrThrow(Registries.LEVEL_STEM);
         return registry.keySet().stream()
                 .map(this::fromIdentifier)
-                .map(Dimension::of);
+                .map(Dimension::new);
     }
 
     @Override
     public Dimension getDimension(final World world) {
         final var handle = ((CraftWorld) world).getHandle();
         final var identifier = handle.getTypeKey().identifier();
-        return Dimension.of(fromIdentifier(identifier));
+        return new Dimension(fromIdentifier(identifier));
     }
 
     @SuppressWarnings("PatternValidation")

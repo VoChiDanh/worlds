@@ -126,6 +126,6 @@ public final class SimpleWorldRegistry implements WorldRegistry {
 
     @SuppressWarnings("PatternValidation")
     private Dimension fromString(final String string) {
-        return Dimension.of(Key.key(string));
+        return new Dimension(Key.key(string));
     }
 }

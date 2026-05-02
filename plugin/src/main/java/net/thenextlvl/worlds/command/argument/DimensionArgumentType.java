@@ -24,7 +24,7 @@ public final class DimensionArgumentType implements SimpleArgumentType<Dimension
 
     @Override
     public Dimension convert(final StringReader reader, final Key type) {
-        return Dimension.of(type);
+        return new Dimension(type);
     }
 
     @Override
