@@ -1,5 +1,6 @@
 package net.thenextlvl.worlds.preset;
 
+import net.kyori.adventure.key.Key;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -26,7 +27,16 @@ public class PresetsTest {
     }
 
     public static Stream<Arguments> unparsedPresets() {
+        final var build = Preset.builder()
+                .name("test")
+                .addLayer(new Layer(Key.key("bedrock"), 3))
+                .addLayer(new Layer(Key.key("bedrock"), 4))
+                .addLayer(new Layer(Key.key("bedrock"), 5))
+                .addLayer(new Layer(Key.key("bedrock"), 5))
+                .build();
+
         return Stream.of(
+                Map.entry(build, "3*minecraft:bedrock,4*minecraft:bedrock,5*minecraft:bedrock,5*minecraft:bedrock;minecraft:plains"),
                 Map.entry(Preset.CLASSIC_FLAT, "minecraft:bedrock,2*minecraft:dirt,minecraft:grass_block;minecraft:plains"),
                 Map.entry(Preset.TUNNELERS_DREAM, "minecraft:bedrock,230*minecraft:stone,5*minecraft:dirt,minecraft:grass_block;minecraft:windswept_hills"),
                 Map.entry(Preset.WATER_WORLD, "minecraft:bedrock,64*minecraft:deepslate,5*minecraft:stone,5*minecraft:dirt,5*minecraft:gravel,90*minecraft:water;minecraft:deep_ocean"),
