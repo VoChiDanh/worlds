@@ -19,7 +19,7 @@ import net.thenextlvl.worlds.command.argument.KeyArgument;
 import net.thenextlvl.worlds.command.argument.SeedArgument;
 import net.thenextlvl.worlds.command.argument.WorldPresetArgument;
 import net.thenextlvl.worlds.command.brigadier.OptionCommand;
-import net.thenextlvl.worlds.experimental.GeneratorType;
+import net.thenextlvl.worlds.generator.GeneratorType;
 import net.thenextlvl.worlds.generator.Generator;
 import net.thenextlvl.worlds.preset.Preset;
 import org.bukkit.command.CommandSender;

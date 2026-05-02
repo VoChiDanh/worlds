@@ -6,7 +6,6 @@ module net.thenextlvl.worlds {
     exports net.thenextlvl.worlds.generator;
     exports net.thenextlvl.worlds.preset;
     exports net.thenextlvl.worlds;
-    exports net.thenextlvl.worlds.experimental;
 
     requires com.google.common;
     requires com.google.gson;

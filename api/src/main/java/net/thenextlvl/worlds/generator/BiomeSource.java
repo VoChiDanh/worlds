@@ -1,4 +1,4 @@
-package net.thenextlvl.worlds.experimental;
+package net.thenextlvl.worlds.generator;
 
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.key.Keyed;
