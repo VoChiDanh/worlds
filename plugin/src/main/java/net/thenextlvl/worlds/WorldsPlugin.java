@@ -399,7 +399,6 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
                     consumer.accept(builder);
                     final var level = builder.build();
                     return level.create().thenApply(regenerated -> {
-                        worldRegistry.setEnabled(level.key(), true);
                         players.forEach(player -> player.teleportAsync(
                                 regenerated.getSpawnLocation(), PlayerTeleportEvent.TeleportCause.PLUGIN
                         ));
