@@ -73,7 +73,7 @@ final class WorldCreateCommand extends OptionCommand {
 
         plugin.bundle().sendMessage(sender, "world.create", placeholder);
         level.create().thenAccept(world -> {
-            plugin.getWorldRegistry().setEnabled(level.key(), true);
+            plugin.getWorldRegistry().register(level, true);
             plugin.bundle().sendMessage(sender, "world.create.success", placeholder);
             if (!(sender instanceof final Entity entity)) return;
             entity.teleportAsync(world.getSpawnLocation(), COMMAND);
