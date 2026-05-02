@@ -6,18 +6,12 @@ import org.bukkit.event.HandlerList;
 import org.bukkit.event.world.WorldEvent;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Contract;
-import org.jspecify.annotations.Nullable;
-
-import java.nio.file.Path;
-import java.util.function.Consumer;
 
 /**
  * Represents an event triggered when an action is scheduled to be performed on a {@link World}.
- * This event allows developers to listen to such actions and optionally cancel or modify them.
- * It supports adding a custom action to be executed during the shutdown process of the scheduled action.
+ * This event allows developers to listen to such actions and optionally cancel them.
  * <p>
- * This event provides details about the type of action being scheduled and allows modification
- * of the event's behavior through implementing the {@link Cancellable} interface.
+ * This event provides details about the type of action being scheduled and allows cancellation.
  * <p>
  * The {@link ActionType} enum defines the possible actions that can be scheduled,
  * such as deleting a world or regenerating it.
@@ -27,9 +21,9 @@ import java.util.function.Consumer;
 public final class WorldActionScheduledEvent extends WorldEvent implements Cancellable {
     private static final HandlerList handlerList = new HandlerList();
 
-    private @Nullable Consumer<Path> action = null;
     private boolean cancelled = false;
-    private final ActionType actionType;
+    private final ActionType
+            actionType;
 
     @ApiStatus.Internal
     public WorldActionScheduledEvent(final World world, final ActionType actionType) {
@@ -45,21 +39,6 @@ public final class WorldActionScheduledEvent extends WorldEvent implements Cance
     @Contract(pure = true)
     public ActionType getActionType() {
         return actionType;
-    }
-
-    /**
-     * Adds a custom action to be executed during the shutdown process of the scheduled world action.
-     *
-     * @param action the action to be performed
-     */
-    @Contract(mutates = "this")
-    public void addAction(final Consumer<Path> action) {
-        this.action = this.action != null ? this.action.andThen(action) : action;
-    }
-
-    @ApiStatus.Internal
-    public @Nullable Consumer<Path> getAction() {
-        return action;
     }
 
     @Override

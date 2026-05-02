@@ -7,8 +7,6 @@ import org.bukkit.World;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Contract;
 
-import java.nio.file.Path;
-import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 @ApiStatus.NonExtendable
@@ -20,12 +18,12 @@ public interface ScheduledWorldOperations {
     Stream<Operation> operations(Key world);
 
     @Contract(pure = true)
-    Stream<Operation> operations(World world);
+    default Stream<Operation> operations(final World world) {
+        return operations(world.key());
+    }
 
     @Contract(pure = true)
     Stream<Operation> operations(WorldActionScheduledEvent.ActionType actionType);
-
-    boolean schedule(World world, WorldActionScheduledEvent.ActionType actionType, Consumer<Path> action);
 
     boolean scheduleDeletion(final World world);
 
@@ -34,10 +32,20 @@ public interface ScheduledWorldOperations {
     boolean scheduleBackupRestoration(final World world, final Backup backup);
 
     @Contract(pure = true)
-    boolean isScheduled(World world, WorldActionScheduledEvent.ActionType actionType);
+    default boolean isScheduled(final World world, final WorldActionScheduledEvent.ActionType actionType) {
+        return isScheduled(world.key(), actionType);
+    }
+
+    @Contract(pure = true)
+    boolean isScheduled(Key world, WorldActionScheduledEvent.ActionType actionType);
 
     @Contract(mutates = "this")
-    boolean cancel(World world, WorldActionScheduledEvent.ActionType actionType);
+    default boolean cancel(final World world, final WorldActionScheduledEvent.ActionType actionType) {
+        return cancel(world.key(), actionType);
+    }
+
+    @Contract(mutates = "this")
+    boolean cancel(Key world, WorldActionScheduledEvent.ActionType actionType);
 
     @Contract(mutates = "this")
     boolean cancel(Operation operation);
