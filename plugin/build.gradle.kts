@@ -57,6 +57,8 @@ paper {
                 "worlds.command.info",
                 "worlds.command.list",
                 "worlds.command.load",
+                "worlds.command.recreate",
+                "worlds.command.regenerate",
                 "worlds.command.save",
                 "worlds.command.save-all",
                 "worlds.command.save-off",
@@ -72,14 +74,27 @@ paper {
         register("worlds.commands.save") {
             description = "Grants access to all world save commands"
             children = listOf(
-                "worlds.command.save.save",
-                "worlds.command.save.save-all",
-                "worlds.command.save.save-off",
-                "worlds.command.save.save-on"
+                "worlds.command.save",
+                "worlds.command.save-all",
+                "worlds.command.save-off",
+                "worlds.command.save-on"
             )
         }
 
+        register("worlds.commands.backup") {
+            description = "Grants access to all world backup commands"
+            children = listOf(
+                "worlds.command.backup"
+            )
+        }
+
+        register("worlds.command")
         register("worlds.command.backup") { children = listOf("worlds.command") }
+        register("worlds.command.backup.create") { children = listOf("worlds.command.backup") }
+        register("worlds.command.backup.delete") { children = listOf("worlds.command.backup") }
+        register("worlds.command.backup.list") { children = listOf("worlds.command.backup") }
+        register("worlds.command.backup.prune") { children = listOf("worlds.command.backup") }
+        register("worlds.command.backup.restore") { children = listOf("worlds.command.backup") }
         register("worlds.command.clone") { children = listOf("worlds.command") }
         register("worlds.command.create") { children = listOf("worlds.command") }
         register("worlds.command.delete") { children = listOf("worlds.command") }
@@ -87,6 +102,8 @@ paper {
         register("worlds.command.info") { children = listOf("worlds.command") }
         register("worlds.command.list") { children = listOf("worlds.command") }
         register("worlds.command.load") { children = listOf("worlds.command") }
+        register("worlds.command.recreate") { children = listOf("worlds.command") }
+        register("worlds.command.regenerate") { children = listOf("worlds.command") }
         register("worlds.command.save") { children = listOf("worlds.command") }
         register("worlds.command.save-all") { children = listOf("worlds.command", "minecraft.command.save-all") }
         register("worlds.command.save-off") { children = listOf("worlds.command", "minecraft.command.save-off") }
