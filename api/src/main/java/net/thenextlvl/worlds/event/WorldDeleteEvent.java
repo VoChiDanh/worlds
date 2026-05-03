@@ -10,7 +10,6 @@ import org.jetbrains.annotations.Contract;
 /**
  * Represents an event triggered when a {@link World} is deleted.
  * This event allows developers to listen to or cancel the deletion of a world.
- * It also provides an option to check if the deleted world is slated for regeneration.
  *
  * @see WorldActionScheduledEvent
  * @since 4.0.0
