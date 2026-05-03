@@ -95,9 +95,7 @@ public class PaperLevelView {
     }
 
     private boolean sameDimensionsGroup(final World first, final World second) {
-        final var firstParent = first.getWorldPath().getParent();
-        final var secondParent = second.getWorldPath().getParent();
-        return firstParent != null && firstParent.equals(secondParent);
+        return first.key().namespace().equals(second.key().namespace());
     }
 
     public Level.Builder read(final Key key, final WorldRegistry.Entry entry) {
