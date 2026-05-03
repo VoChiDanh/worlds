@@ -11,7 +11,7 @@ import net.thenextlvl.worlds.OperationScheduler;
 import net.thenextlvl.worlds.WorldOperationException;
 import net.thenextlvl.worlds.WorldsPlugin;
 import net.thenextlvl.worlds.command.CommandFailureHandler;
-import net.thenextlvl.worlds.command.argument.CommandFlagsArgument;
+import net.thenextlvl.worlds.command.argument.CommandOptionsArgument;
 import net.thenextlvl.worlds.command.brigadier.SimpleCommand;
 import net.thenextlvl.worlds.command.suggestion.BackupSuggestionProvider;
 import org.bukkit.World;
@@ -42,7 +42,7 @@ final class WorldBackupRestoreCommand extends SimpleCommand {
     }
 
     private ArgumentBuilder<CommandSourceStack, ?> x(final ArgumentBuilder<CommandSourceStack, ?> command) {
-        return command.then(Commands.argument("flags", new CommandFlagsArgument(
+        return command.then(Commands.argument("options", new CommandOptionsArgument(
                         Set.of("--confirm", "--schedule")
                 )).executes(this))
                 .executes(this::confirmationNeeded);
@@ -58,11 +58,11 @@ final class WorldBackupRestoreCommand extends SimpleCommand {
 
     @Override
     public int run(final CommandContext<CommandSourceStack> context) {
-        final var flags = context.getArgument("flags", CommandFlagsArgument.Flags.class);
-        if (!flags.contains("--confirm") && !flags.contains("--schedule")) return confirmationNeeded(context);
+        final var options = context.getArgument("options", CommandOptionsArgument.Options.class);
+        if (!options.contains("--confirm") && !options.contains("--schedule")) return confirmationNeeded(context);
         final var world = context.getArgument("world", World.class);
         final var name = tryGetArgument(context, "backup", String.class);
-        final var schedule = flags.contains("--schedule");
+        final var schedule = options.contains("--schedule");
         if (!schedule) plugin.bundle().sendMessage(context.getSource().getSender(), "world.backup.restore",
                 Placeholder.parsed("world", world.key().asString()));
 

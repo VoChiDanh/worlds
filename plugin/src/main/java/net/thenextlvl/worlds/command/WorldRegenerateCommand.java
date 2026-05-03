@@ -10,7 +10,7 @@ import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.thenextlvl.worlds.OperationScheduler;
 import net.thenextlvl.worlds.WorldOperationException;
 import net.thenextlvl.worlds.WorldsPlugin;
-import net.thenextlvl.worlds.command.argument.CommandFlagsArgument;
+import net.thenextlvl.worlds.command.argument.CommandOptionsArgument;
 import net.thenextlvl.worlds.command.brigadier.SimpleCommand;
 import org.bukkit.World;
 import org.jspecify.annotations.NullMarked;
@@ -35,7 +35,7 @@ final class WorldRegenerateCommand extends SimpleCommand {
 
     private RequiredArgumentBuilder<CommandSourceStack, World> regenerate() {
         return worldArgument(plugin)
-                .then(Commands.argument("flags", new CommandFlagsArgument(
+                .then(Commands.argument("options", new CommandOptionsArgument(
                         Set.of("--confirm", "--schedule", "--seed")
                 )).executes(this))
                 .executes(this::confirmationNeeded);
@@ -52,16 +52,16 @@ final class WorldRegenerateCommand extends SimpleCommand {
     @Override
     public int run(final CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         final var sender = context.getSource().getSender();
-        final var flags = context.getArgument("flags", CommandFlagsArgument.Flags.class);
-        if (!flags.contains("--confirm") && !flags.contains("--schedule")) return confirmationNeeded(context);
+        final var options = context.getArgument("options", CommandOptionsArgument.Options.class);
+        if (!options.contains("--confirm") && !options.contains("--schedule")) return confirmationNeeded(context);
 
         final var world = context.getArgument("world", World.class);
-        final var schedule = flags.contains("--schedule");
+        final var schedule = options.contains("--schedule");
 
         if (!schedule) plugin.bundle().sendMessage(sender, "world.regenerate",
                 Placeholder.parsed("world", world.key().asString()));
 
-        final var regenerateSeed = flags.contains("--seed");
+        final var regenerateSeed = options.contains("--seed");
         final var seed = regenerateSeed ? ThreadLocalRandom.current().nextLong() : world.getSeed();
 
         if (schedule && plugin.getScheduler().cancel(world.key(), REGENERATE)) {

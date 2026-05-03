@@ -11,10 +11,14 @@ import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.thenextlvl.worlds.Dimension;
 import net.thenextlvl.worlds.Level;
 import net.thenextlvl.worlds.WorldsPlugin;
+import net.thenextlvl.worlds.command.argument.CommandOptionsArgument;
 import net.thenextlvl.worlds.command.argument.DimensionArgumentType;
+import net.thenextlvl.worlds.command.argument.GeneratorArgument;
+import net.thenextlvl.worlds.command.argument.GeneratorTypeArgument;
 import net.thenextlvl.worlds.command.argument.KeyArgument;
 import net.thenextlvl.worlds.command.argument.SeedArgument;
-import net.thenextlvl.worlds.command.brigadier.OptionCommand;
+import net.thenextlvl.worlds.command.argument.WorldPresetArgument;
+import net.thenextlvl.worlds.command.brigadier.SimpleCommand;
 import net.thenextlvl.worlds.generator.Generator;
 import net.thenextlvl.worlds.generator.GeneratorType;
 import net.thenextlvl.worlds.preset.Preset;
@@ -22,13 +26,13 @@ import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.jspecify.annotations.NullMarked;
 
-import java.util.Set;
+import java.util.Map;
 
 import static net.thenextlvl.worlds.command.WorldCommand.worldArgument;
 import static org.bukkit.event.player.PlayerTeleportEvent.TeleportCause.COMMAND;
 
 @NullMarked
-final class WorldRecreateCommand extends OptionCommand {
+final class WorldRecreateCommand extends SimpleCommand {
     private WorldRecreateCommand(final WorldsPlugin plugin) {
         super(plugin, "recreate", "worlds.command.recreate");
     }
@@ -38,19 +42,20 @@ final class WorldRecreateCommand extends OptionCommand {
         return command.create().then(command.createCommand());
     }
 
-    @Override
-    protected RequiredArgumentBuilder<CommandSourceStack, ?> createCommand() {
+    private RequiredArgumentBuilder<CommandSourceStack, ?> createCommand() {
         final var key = Commands.argument("key", new KeyArgument());
+        final var options = Commands.argument("options", new CommandOptionsArgument(Map.of(
+                "bonus-chest", BoolArgumentType.bool(),
+                "dimension", new DimensionArgumentType(plugin),
+                "generator", new GeneratorArgument(plugin),
+                "hardcore", BoolArgumentType.bool(),
+                "preset", new WorldPresetArgument(plugin),
+                "seed", new SeedArgument(),
+                "structures", BoolArgumentType.bool(),
+                "type", new GeneratorTypeArgument(plugin)
+        ))).executes(this);
 
-        addOptions(key, false, Set.of(
-                new Option("bonus-chest", BoolArgumentType.bool()),
-                new Option("hardcore", BoolArgumentType.bool()),
-                new Option("dimension", new DimensionArgumentType(plugin)),
-                new Option("seed", new SeedArgument()),
-                new Option("structures", BoolArgumentType.bool())
-        ), null);
-
-        return worldArgument(plugin).then(key.executes(this));
+        return worldArgument(plugin).then(key.then(options).executes(this));
     }
 
     @Override
@@ -58,17 +63,19 @@ final class WorldRecreateCommand extends OptionCommand {
         final var sender = context.getSource().getSender();
         final var world = context.getArgument("world", World.class);
         final var key = context.getArgument("key", Key.class);
+        final var options = tryGetArgument(context, "options", CommandOptionsArgument.Options.class)
+                .orElseGet(CommandOptionsArgument.Options::new);
 
         final var builder = Level.copy(world);
 
-        tryGetArgument(context, "bonus-chest", Boolean.class).ifPresent(builder::bonusChest);
-        tryGetArgument(context, "dimension", Dimension.class).ifPresent(builder::dimension);
-        tryGetArgument(context, "generator", Generator.class).ifPresent(builder::generator);
-        tryGetArgument(context, "hardcore", Boolean.class).ifPresent(builder::hardcore);
-        tryGetArgument(context, "preset", Preset.class).map(GeneratorType.FLAT::with).ifPresent(builder::generatorType);
-        tryGetArgument(context, "seed", Long.class).ifPresent(builder::seed);
-        tryGetArgument(context, "structures", Boolean.class).ifPresent(builder::structures);
-        tryGetArgument(context, "type", GeneratorType.class).ifPresent(builder::generatorType);
+        options.getArgument("bonus-chest", Boolean.class).ifPresent(builder::bonusChest);
+        options.getArgument("dimension", Dimension.class).ifPresent(builder::dimension);
+        options.getArgument("generator", Generator.class).ifPresent(builder::generator);
+        options.getArgument("hardcore", Boolean.class).ifPresent(builder::hardcore);
+        options.getArgument("preset", Preset.class).map(GeneratorType.FLAT::with).ifPresent(builder::generatorType);
+        options.getArgument("seed", Long.class).ifPresent(builder::seed);
+        options.getArgument("structures", Boolean.class).ifPresent(builder::structures);
+        options.getArgument("type", GeneratorType.class).ifPresent(builder::generatorType);
 
         final var level = builder.key(key).build();
 

@@ -1,7 +1,6 @@
 package net.thenextlvl.worlds.command;
 
 import com.mojang.brigadier.builder.ArgumentBuilder;
-import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
@@ -11,11 +10,12 @@ import net.thenextlvl.worlds.Dimension;
 import net.thenextlvl.worlds.Level;
 import net.thenextlvl.worlds.WorldOperationException;
 import net.thenextlvl.worlds.WorldsPlugin;
+import net.thenextlvl.worlds.command.argument.CommandOptionsArgument;
 import net.thenextlvl.worlds.command.argument.DimensionArgumentType;
 import net.thenextlvl.worlds.command.argument.GeneratorArgument;
 import net.thenextlvl.worlds.command.argument.KeyArgument;
 import net.thenextlvl.worlds.command.argument.WorldPresetArgument;
-import net.thenextlvl.worlds.command.brigadier.OptionCommand;
+import net.thenextlvl.worlds.command.brigadier.SimpleCommand;
 import net.thenextlvl.worlds.command.suggestion.WorldImportSuggestionProvider;
 import net.thenextlvl.worlds.generator.Generator;
 import net.thenextlvl.worlds.generator.GeneratorType;
@@ -23,33 +23,30 @@ import net.thenextlvl.worlds.preset.Preset;
 import org.bukkit.entity.Entity;
 import org.jspecify.annotations.NullMarked;
 
-import java.util.Set;
+import java.util.Map;
 
 import static org.bukkit.event.player.PlayerTeleportEvent.TeleportCause.COMMAND;
 
 @NullMarked
-final class WorldImportCommand extends OptionCommand {
+final class WorldImportCommand extends SimpleCommand {
     private WorldImportCommand(final WorldsPlugin plugin) {
         super(plugin, "import", "worlds.command.import");
     }
 
     public static ArgumentBuilder<CommandSourceStack, ?> create(final WorldsPlugin plugin) {
         final var command = new WorldImportCommand(plugin);
-        return command.create().then(command.createCommand());
-    }
 
-    @Override
-    protected RequiredArgumentBuilder<CommandSourceStack, Key> createCommand() {
-        final var command = Commands.argument("key", new KeyArgument())
-                .suggests(new WorldImportSuggestionProvider(plugin)).executes(this);
+        final var options = Commands.argument("options", new CommandOptionsArgument(Map.of(
+                "dimension", new DimensionArgumentType(plugin),
+                "generator", new GeneratorArgument(plugin),
+                "preset", new WorldPresetArgument(plugin)
+        ))).executes(command);
 
-        addOptions(command, false, Set.of(
-                new Option("dimension", new DimensionArgumentType(plugin)),
-                new Option("generator", new GeneratorArgument(plugin), "preset"),
-                new Option("preset", new WorldPresetArgument(plugin), "generator")
-        ), null);
-
-        return command;
+        final var key = Commands.argument("key", new KeyArgument());
+        return command.create().then(key
+                .suggests(new WorldImportSuggestionProvider(plugin))
+                .then(options)
+                .executes(command));
     }
 
     @Override
@@ -57,9 +54,12 @@ final class WorldImportCommand extends OptionCommand {
         final var sender = context.getSource().getSender();
         final var key = context.getArgument("key", Key.class);
 
-        final var preset = tryGetArgument(context, "preset", Preset.class).orElse(null);
-        final var dimension = tryGetArgument(context, "dimension", Dimension.class).orElse(null);
-        final var generator = tryGetArgument(context, "generator", Generator.class).orElse(null);
+        final var options = tryGetArgument(context, "options", CommandOptionsArgument.Options.class)
+                .orElseGet(CommandOptionsArgument.Options::new);
+        final var generatorType = options.getArgument("preset", Preset.class)
+                .map(GeneratorType.FLAT::with).orElse(null);
+        final var dimension = options.getArgument("dimension", Dimension.class).orElse(null);
+        final var generator = options.getArgument("generator", Generator.class).orElse(null);
 
         if (plugin.getWorldRegistry().isRegistered(key)) {
             CommandFailureHandler.handle(plugin, sender, new WorldOperationException(
@@ -68,11 +68,12 @@ final class WorldImportCommand extends OptionCommand {
             return 0;
         }
 
-        plugin.bundle().sendMessage(sender, "world.import", Placeholder.parsed("world", key.asString()));
+        final var placeholder = Placeholder.parsed("world", key.asString());
+        plugin.bundle().sendMessage(sender, "world.import", placeholder);
 
         final var build = Level.builder(key)
                 .generator(generator)
-                .generatorType(preset != null ? GeneratorType.FLAT.with(preset) : null)
+                .generatorType(generatorType)
                 .dimension(dimension)
                 .build();
 
@@ -83,7 +84,7 @@ final class WorldImportCommand extends OptionCommand {
             if (!(sender instanceof final Entity entity)) return;
             entity.teleportAsync(level.getSpawnLocation(), COMMAND);
         }).exceptionally(throwable -> {
-            CommandFailureHandler.handle(plugin, sender, throwable, Placeholder.parsed("world", key.asString()));
+            CommandFailureHandler.handle(plugin, sender, throwable, placeholder);
             return null;
         });
 
