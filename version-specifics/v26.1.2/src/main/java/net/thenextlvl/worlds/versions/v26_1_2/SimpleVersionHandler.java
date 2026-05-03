@@ -96,12 +96,6 @@ public final class SimpleVersionHandler extends VersionHandler {
     }
 
     @Override
-    public String getOverworldName() {
-        final var properties = ((CraftServer) plugin.getServer()).getServer().getProperties();
-        return properties.levelName;
-    }
-
-    @Override
     public boolean isDirectoryLockException(final Throwable throwable) {
         return throwable instanceof DirectoryLock.LockException;
     }

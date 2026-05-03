@@ -36,8 +36,6 @@ public abstract class VersionHandler {
 
     public abstract Class<?> getTickThreadClass();
 
-    public abstract String getOverworldName();
-
     public abstract boolean isDirectoryLockException(Throwable throwable);
 
     public abstract CompletableFuture<@Nullable Void> saveAsync(World world, boolean flush);
