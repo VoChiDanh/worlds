@@ -49,7 +49,7 @@ public class SimpleBackupProvider implements BackupProvider {
                 ).world(worldKey.asString()));
             }
             restoreNow(worldKey, backup);
-            plugin.getScheduler().cancel(world, WorldActionScheduledEvent.ActionType.RESTORE_BACKUP);
+            plugin.getScheduler().cancel(worldKey, WorldActionScheduledEvent.ActionType.RESTORE_BACKUP);
             return plugin.load(worldKey);
         });
     }

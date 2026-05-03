@@ -68,6 +68,13 @@ final class SimpleOperationScheduler implements OperationScheduler {
     }
 
     @Override
+    public boolean cancel(final Key world) {
+        if (operations.remove(world) == null) return false;
+        save();
+        return true;
+    }
+
+    @Override
     public boolean cancel(final OperationScheduler.Operation operation) {
         if (!operations.remove(operation.key(), operation)) return false;
         save();

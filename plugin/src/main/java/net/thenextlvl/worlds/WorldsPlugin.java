@@ -350,7 +350,7 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
             ).world(world.key().asString()));
             levelView.delete(world.getWorldPath());
             worldRegistry.unregister(world.key());
-            getScheduler().cancel(world, WorldActionScheduledEvent.ActionType.DELETE);
+            getScheduler().cancel(world.key());
             return CompletableFuture.completedFuture(true);
         })).exceptionallyCompose(throwable -> {
             final var t = throwable.getCause() != null ? throwable.getCause() : throwable;
@@ -383,7 +383,7 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
             final var level = builder.build();
 
             levelView.regenerate(world.getWorldPath(), level.getSeed());
-            getScheduler().cancel(world, WorldActionScheduledEvent.ActionType.REGENERATE);
+            getScheduler().cancel(world.key(), WorldActionScheduledEvent.ActionType.REGENERATE);
 
             return level.create().thenApply(regenerated -> {
                 players.forEach(player -> player.teleportAsync(

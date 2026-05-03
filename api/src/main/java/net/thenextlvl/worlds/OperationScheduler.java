@@ -3,7 +3,6 @@ package net.thenextlvl.worlds;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.key.Keyed;
 import net.thenextlvl.worlds.event.WorldActionScheduledEvent;
-import org.bukkit.World;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Contract;
 
@@ -47,18 +46,6 @@ public interface OperationScheduler {
     Optional<Operation> operation(Key world);
 
     /**
-     * Returns the scheduled operation for a world.
-     *
-     * @param world the world
-     * @return the scheduled operation
-     * @since 4.0.0
-     */
-    @Contract(pure = true)
-    default Optional<Operation> operation(final World world) {
-        return operation(world.key());
-    }
-
-    /**
      * Schedules an operation.
      *
      * @param operation the operation to schedule
@@ -67,19 +54,6 @@ public interface OperationScheduler {
      */
     @Contract(mutates = "this")
     boolean schedule(Operation operation);
-
-    /**
-     * Checks whether an operation is scheduled for a world.
-     *
-     * @param world      the world
-     * @param actionType the action type
-     * @return {@code true} if the operation is scheduled, {@code false} otherwise
-     * @since 4.0.0
-     */
-    @Contract(pure = true)
-    default boolean isScheduled(final World world, final WorldActionScheduledEvent.ActionType actionType) {
-        return isScheduled(world.key(), actionType);
-    }
 
     /**
      * Checks whether an operation is scheduled for a world key.
@@ -93,19 +67,6 @@ public interface OperationScheduler {
     boolean isScheduled(Key world, WorldActionScheduledEvent.ActionType actionType);
 
     /**
-     * Cancels a scheduled operation for a world.
-     *
-     * @param world      the world
-     * @param actionType the action type
-     * @return {@code true} if an operation was canceled, {@code false} otherwise
-     * @since 4.0.0
-     */
-    @Contract(mutates = "this")
-    default boolean cancel(final World world, final WorldActionScheduledEvent.ActionType actionType) {
-        return cancel(world.key(), actionType);
-    }
-
-    /**
      * Cancels a scheduled operation for a world key.
      *
      * @param world      the world key
@@ -115,6 +76,16 @@ public interface OperationScheduler {
      */
     @Contract(mutates = "this")
     boolean cancel(Key world, WorldActionScheduledEvent.ActionType actionType);
+
+    /**
+     * Cancels a scheduled operation for a world key.
+     *
+     * @param world the world key
+     * @return {@code true} if an operation was canceled, {@code false} otherwise
+     * @since 4.0.0
+     */
+    @Contract(mutates = "this")
+    boolean cancel(Key world);
 
     /**
      * Cancels a scheduled operation.
