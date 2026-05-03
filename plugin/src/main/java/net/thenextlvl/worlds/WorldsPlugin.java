@@ -19,6 +19,7 @@ import net.thenextlvl.worlds.event.WorldBackupRestoreEvent;
 import net.thenextlvl.worlds.event.WorldDeleteEvent;
 import net.thenextlvl.worlds.event.WorldRegenerateEvent;
 import net.thenextlvl.worlds.generator.GeneratorView;
+import net.thenextlvl.worlds.listener.PluginListener;
 import net.thenextlvl.worlds.listener.PortalListener;
 import net.thenextlvl.worlds.listener.TeleportListener;
 import net.thenextlvl.worlds.listener.WorldListener;
@@ -45,7 +46,6 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
-import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -119,19 +119,7 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
         worldRegistry.read();
         worldOperationScheduler.load();
         worldOperationScheduler.runScheduledOperations();
-        warnVoidGeneratorPlugin();
         registerListeners();
-    }
-
-    private void warnVoidGeneratorPlugin() {
-        final var names = Stream.of("VoidWorldGenerator", "VoidGen", "VoidGenerator", "VoidWorld", "VoidGenPlus",
-                "DeluxeVoidWorld", "CleanroomGenerator", "CompletelyEmpty");
-        if (names.map(getServer().getPluginManager()::getPlugin).filter(Objects::nonNull).findAny().isEmpty()) return;
-        getComponentLogger().warn("It appears you are using a plugin to generate void worlds");
-        getComponentLogger().warn("This is not required, and incompatible with Vanilla world generation");
-        getComponentLogger().warn("Please use the preset 'the-void' instead");
-        getComponentLogger().warn("You can do this with the command '/world create <key> preset the-void'");
-        getComponentLogger().warn("Read more at https://thenextlvl.net/blog/void-generator-plugins");
     }
 
     public Path presetsFolder() {
@@ -176,6 +164,7 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
     }
 
     private void registerListeners() {
+        new PluginListener(this).init();
         getServer().getPluginManager().registerEvents(new PortalListener(this), this);
         getServer().getPluginManager().registerEvents(new TeleportListener(this), this);
         getServer().getPluginManager().registerEvents(new WorldListener(this), this);
