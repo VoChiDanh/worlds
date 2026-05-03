@@ -11,7 +11,6 @@ import net.thenextlvl.worlds.WorldsPlugin;
 import net.thenextlvl.worlds.event.WorldCloneEvent;
 import org.bukkit.PortalType;
 import org.bukkit.World;
-import org.bukkit.generator.WorldInfo;
 import org.intellij.lang.annotations.Subst;
 import org.jetbrains.annotations.Unmodifiable;
 import org.jspecify.annotations.NullMarked;
@@ -177,13 +176,6 @@ public class PaperLevelView {
         return plugin.handler().saveLevelDataAsync(world);
     }
 
-    public String findFreeName(final String name) {
-        final var usedNames = plugin.getServer().getWorlds().stream()
-                .map(WorldInfo::getName)
-                .collect(Collectors.toSet());
-        return findFreeName(usedNames, name);
-    }
-
     @SuppressWarnings("PatternValidation")
     public Key findFreeKey(final Key key) {
         return findFreeKey(key.namespace(), key.value());
@@ -199,14 +191,7 @@ public class PaperLevelView {
         return Key.key(namespace, findFreeValue(usedValues, value));
     }
 
-    public Path findFreePath(final String name) {
-        final var usedPaths = listDirectories().stream()
-                .map(Path::getFileName)
-                .map(Path::toString)
-                .collect(Collectors.toSet());
-        return Path.of(findFreeName(usedPaths, name));
-    }
-
+    // todo: can be removed?
     public static String findFreeName(final Set<String> usedNames, final String name) {
         if (!usedNames.contains(name)) return name;
 
@@ -330,7 +315,6 @@ public class PaperLevelView {
     private CompletableFuture<World> cloneInternal(final World world, final Consumer<Level.Builder> builder, final boolean full) {
         final var levelBuilder = Level.copy(world);
 
-        levelBuilder.name(findFreeName(world.getName()));
         levelBuilder.key(findFreeKey(world.key()));
 
         builder.accept(levelBuilder);
@@ -342,7 +326,7 @@ public class PaperLevelView {
             ).key(clone.key());
             if (plugin.getServer().getWorld(clone.getName()) != null) throw new WorldOperationException(
                     WorldOperationException.Reason.WORLD_NAME_EXISTS
-            ).world(clone.getName());
+            ).key(clone.getName());
             if (Files.exists(clone.getDirectory())) throw new WorldOperationException(
                     Files.isDirectory(clone.getDirectory())
                             ? WorldOperationException.Reason.WORLD_PATH_EXISTS
@@ -362,7 +346,7 @@ public class PaperLevelView {
             } catch (final IOException e) {
                 return CompletableFuture.failedFuture(new WorldOperationException(
                         WorldOperationException.Reason.BACKUP_WRITE_FAILED, e
-                ).key(clone.key()).world(clone.getName()).path(clone.getDirectory()));
+                ).key(clone.key()).path(clone.getDirectory()));
             }
         }) : clone.create();
     }

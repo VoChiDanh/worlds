@@ -4,11 +4,12 @@ import io.papermc.paper.math.Position;
 import io.papermc.paper.math.Rotation;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.key.Keyed;
-import net.thenextlvl.worlds.generator.GeneratorType;
 import net.thenextlvl.worlds.generator.Generator;
+import net.thenextlvl.worlds.generator.GeneratorType;
 import org.bukkit.World;
 import org.bukkit.generator.BiomeProvider;
 import org.bukkit.generator.ChunkGenerator;
+import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Contract;
 import org.jspecify.annotations.Nullable;
 
@@ -31,14 +32,10 @@ public sealed interface Level extends Keyed permits SimpleLevel {
      */
     Path getDirectory();
 
-    /**
-     * Returns the world name.
-     *
-     * @return the world name
-     * @since 4.0.0
-     */
-    @Contract(pure = true)
-    String getName();
+    @ApiStatus.Obsolete
+    default String getName() {
+        return key().asString();
+    }
 
     /**
      * Returns the level dimension.
@@ -213,25 +210,6 @@ public sealed interface Level extends Keyed permits SimpleLevel {
          */
         @Contract(mutates = "this")
         Builder key(Key key);
-
-        /**
-         * Returns the configured world name.
-         *
-         * @return the world name, or empty
-         * @since 4.0.0
-         */
-        @Contract(pure = true)
-        Optional<String> name();
-
-        /**
-         * Sets the world name.
-         *
-         * @param name the world name, or {@code null} to use the key value
-         * @return this builder
-         * @since 4.0.0
-         */
-        @Contract(mutates = "this")
-        Builder name(@Nullable String name);
 
         /**
          * Returns the configured dimension.

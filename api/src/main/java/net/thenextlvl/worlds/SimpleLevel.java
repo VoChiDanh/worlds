@@ -18,7 +18,6 @@ import java.util.concurrent.ThreadLocalRandom;
 
 final class SimpleLevel implements Level {
     private final Key key;
-    private final String name;
 
     private final Dimension dimension;
     private final GeneratorType generatorType;
@@ -42,7 +41,6 @@ final class SimpleLevel implements Level {
         final var server = WorldsAccess.access().getServer();
 
         this.key = builder.key;
-        this.name = builder.name().orElseGet(() -> builder.key().value());
 
         this.dimension = builder.dimension().orElse(Dimension.OVERWORLD);
         this.hardcore = builder.hardcore().orElseGet(server::isHardcore);
@@ -57,8 +55,9 @@ final class SimpleLevel implements Level {
 
         this.generator = builder.generator;
 
-        this.biomeProvider = builder.generator().flatMap(generator -> generator.biomeProvider(name)).orElse(null);
-        this.chunkGenerator = builder.generator().flatMap(generator -> generator.generator(name)).orElse(null);
+        // todo: doublecheck if key.value is used as the name by bukkit now?
+        this.biomeProvider = builder.generator().flatMap(generator -> generator.biomeProvider(key.value())).orElse(null);
+        this.chunkGenerator = builder.generator().flatMap(generator -> generator.generator(key.value())).orElse(null);
 
         this.generatorType = builder.generatorType().orElse(GeneratorType.NORMAL);
     }
@@ -66,11 +65,6 @@ final class SimpleLevel implements Level {
     @Override
     public Path getDirectory() {
         return WorldsAccess.access().resolveLevelDirectory(key);
-    }
-
-    @Override
-    public String getName() {
-        return name;
     }
 
     @Override
@@ -146,7 +140,6 @@ final class SimpleLevel implements Level {
                 .generator(generator)
                 .generatorType(generatorType)
                 .hardcore(hardcore)
-                .name(name)
                 .seed(seed)
                 .structures(structures);
     }
@@ -165,8 +158,7 @@ final class SimpleLevel implements Level {
                 .seed(world.getSeed())
                 .key(world.key())
                 .dimension(access.getDimension(world))
-                .seed(world.getSeed())
-                .name(world.getName());
+                .seed(world.getSeed());
     }
 
     static final class Builder implements Level.Builder {
@@ -180,22 +172,10 @@ final class SimpleLevel implements Level {
         private @Nullable Long seed;
         private @Nullable Position spawnPositionOverride;
         private @Nullable Rotation spawnRotationOverride;
-        private @Nullable String name;
         private Key key;
 
         public Builder(final Key key) {
             this.key = key;
-        }
-
-        @Override
-        public Optional<String> name() {
-            return Optional.ofNullable(name);
-        }
-
-        @Override
-        public Level.Builder name(@Nullable final String name) {
-            this.name = name;
-            return this;
         }
 
         @Override

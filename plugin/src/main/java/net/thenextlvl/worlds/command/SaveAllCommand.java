@@ -41,7 +41,7 @@ public final class SaveAllCommand extends BrigadierCommand {
                 final var failed = new WorldOperationException(
                         WorldOperationException.Reason.SAVE_FAILED,
                         throwable
-                ).world(world.key().asString()).key(world.key());
+                ).key(world.key());
                 return CompletableFuture.failedFuture(failed);
             });
         }).toArray(CompletableFuture[]::new)).thenAccept(ignored -> {

@@ -253,7 +253,7 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
                 .map(Level::create)
                 .orElseGet(() -> CompletableFuture.failedFuture(new WorldOperationException(
                         WorldOperationException.Reason.WORLD_NOT_FOUND
-                ).world(key.asString())));
+                ).key(key)));
     }
 
     @Override
@@ -347,7 +347,7 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
         return movePlayersToOverworld(world).thenCompose(ignored -> unload(world, false).thenCompose(success -> {
             if (!success) return CompletableFuture.failedFuture(new WorldOperationException(
                     WorldOperationException.Reason.UNLOAD_FAILED
-            ).world(world.key().asString()));
+            ).key(world.key()));
             levelView.delete(world.getWorldPath());
             worldRegistry.unregister(world.key());
             getScheduler().cancel(world.key());
@@ -359,7 +359,7 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
             return CompletableFuture.failedFuture(new WorldOperationException(
                     WorldOperationException.Reason.INTERNAL_ERROR,
                     t
-            ).world(world.key().asString()).key(world.key()));
+            ).key(world.key()).key(world.key()));
         });
     }
 
@@ -376,7 +376,7 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
         return movePlayersToOverworld(world).thenCompose(ignored -> unload(world, false).thenCompose(success -> {
             if (!success) return CompletableFuture.failedFuture(new WorldOperationException(
                     WorldOperationException.Reason.UNLOAD_FAILED
-            ).world(world.key().asString()));
+            ).key(world.key()));
 
             final var builder = Level.copy(world).resetSpawnPosition(true);
             consumer.accept(builder);

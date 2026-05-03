@@ -46,7 +46,7 @@ public class SimpleBackupProvider implements BackupProvider {
             if (!success) {
                 return CompletableFuture.failedFuture(new WorldOperationException(
                         WorldOperationException.Reason.UNLOAD_FAILED
-                ).world(worldKey.asString()));
+                ).key(worldKey));
             }
             restoreNow(worldKey, backup);
             plugin.getScheduler().cancel(worldKey, WorldActionScheduledEvent.ActionType.RESTORE_BACKUP);
@@ -64,7 +64,7 @@ public class SimpleBackupProvider implements BackupProvider {
             throw new WorldOperationException(
                     WorldOperationException.Reason.BACKUP_RESTORE_FAILED,
                     e
-            ).key(key).world(key.asString()).backup(backup.name());
+            ).key(key).backup(backup.name());
         }
     }
 
@@ -142,7 +142,7 @@ public class SimpleBackupProvider implements BackupProvider {
             throw new WorldOperationException(
                     WorldOperationException.Reason.BACKUP_DIRECTORY_FAILED,
                     e
-            ).key(world.key()).world(world.key().asString()).path(folder);
+            ).key(world.key()).path(folder);
         }
         final var timestamp = FORMATTER.format(Instant.now());
         final var fileName = name != null ? name + ".zip" : findAvailableName(folder, timestamp);
@@ -169,7 +169,7 @@ public class SimpleBackupProvider implements BackupProvider {
             final var backup = name != null ? name : fileName.substring(0, fileName.length() - 4);
             throw new WorldOperationException(
                     WorldOperationException.Reason.BACKUP_WRITE_FAILED, e
-            ).key(world.key()).world(world.key().asString()).backup(backup).path(backupPath);
+            ).key(world.key()).backup(backup).path(backupPath);
         }
         try {
             final var attrs = Files.readAttributes(backupPath, BasicFileAttributes.class);
@@ -185,7 +185,7 @@ public class SimpleBackupProvider implements BackupProvider {
             throw new WorldOperationException(
                     WorldOperationException.Reason.BACKUP_READ_FAILED,
                     e
-            ).key(world.key()).world(world.key().asString()).path(backupPath);
+            ).key(world.key()).path(backupPath);
         }
     }
 

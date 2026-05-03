@@ -1,6 +1,5 @@
 package net.thenextlvl.worlds.command;
 
-import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import net.thenextlvl.worlds.WorldOperationException;
@@ -59,14 +58,12 @@ public final class CommandFailureHandler {
         final var builder = TagResolver.builder();
         builder.resolvers(placeholders);
 
-        exception.map(WorldOperationException::key).map(Key::asString)
-                .ifPresent(key -> builder.resolver(Placeholder.parsed("key", key)));
+        exception.map(WorldOperationException::key)
+                .ifPresent(key -> builder.resolvers(Placeholder.parsed("key", key), Placeholder.parsed("world", key)));
         exception.map(WorldOperationException::path).map(Path::toString)
                 .ifPresent(path -> builder.resolver(Placeholder.parsed("path", path)));
         exception.map(WorldOperationException::backup)
                 .ifPresent(backup -> builder.resolver(Placeholder.parsed("backup", backup)));
-        exception.map(WorldOperationException::world)
-                .ifPresent(world -> builder.resolver(Placeholder.parsed("world", world)));
         generator.map(GeneratorException::getPlugin)
                 .ifPresent(plugin -> builder.resolver(Placeholder.parsed("plugin", plugin)));
         Optional.ofNullable(throwable.getMessage())

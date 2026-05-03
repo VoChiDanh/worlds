@@ -8,8 +8,7 @@ import java.nio.file.Path;
 
 public final class WorldOperationException extends RuntimeException {
     private final Reason reason;
-    private final @Nullable String world;
-    private final @Nullable Key key;
+    private final @Nullable String key;
     private final @Nullable Path path;
     private final @Nullable String backup;
 
@@ -18,20 +17,18 @@ public final class WorldOperationException extends RuntimeException {
     }
 
     public WorldOperationException(final Reason reason, @Nullable final Throwable cause) {
-        this(reason, cause, null, null, null, null);
+        this(reason, cause, null, null, null);
     }
 
     private WorldOperationException(
             final Reason reason,
             @Nullable final Throwable cause,
-            @Nullable final String world,
-            @Nullable final Key key,
+            @Nullable final String key,
             @Nullable final Path path,
             @Nullable final String backup
     ) {
         super(cause);
         this.reason = reason;
-        this.world = world;
         this.key = key;
         this.path = path;
         this.backup = backup;
@@ -41,11 +38,7 @@ public final class WorldOperationException extends RuntimeException {
         return reason;
     }
 
-    public @Nullable String world() {
-        return world;
-    }
-
-    public @Nullable Key key() {
+    public @Nullable String key() {
         return key;
     }
 
@@ -57,20 +50,20 @@ public final class WorldOperationException extends RuntimeException {
         return backup;
     }
 
-    public WorldOperationException world(final String world) {
-        return new WorldOperationException(reason, getCause(), world, key, path, backup);
+    public WorldOperationException key(final String key) {
+        return new WorldOperationException(reason, getCause(), key, path, backup);
     }
 
     public WorldOperationException key(final Key key) {
-        return new WorldOperationException(reason, getCause(), world, key, path, backup);
+        return key(key.asString());
     }
 
     public WorldOperationException path(final Path path) {
-        return new WorldOperationException(reason, getCause(), world, key, path, backup);
+        return new WorldOperationException(reason, getCause(), key, path, backup);
     }
 
     public WorldOperationException backup(final String backup) {
-        return new WorldOperationException(reason, getCause(), world, key, path, backup);
+        return new WorldOperationException(reason, getCause(), key, path, backup);
     }
 
     public enum Reason implements Translatable {

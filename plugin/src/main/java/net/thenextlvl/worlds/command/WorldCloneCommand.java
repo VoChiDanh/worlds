@@ -1,7 +1,6 @@
 package net.thenextlvl.worlds.command;
 
 import com.mojang.brigadier.arguments.BoolArgumentType;
-import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.ArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
@@ -37,8 +36,7 @@ final class WorldCloneCommand extends OptionCommand {
 
         addOptions(world, false, Set.of(
                 new Option("full", BoolArgumentType.bool()),
-                new Option("key", new KeyArgument()),
-                new Option("name", StringArgumentType.string())
+                new Option("key", new KeyArgument())
         ), null);
 
         return world.executes(this);
@@ -55,7 +53,6 @@ final class WorldCloneCommand extends OptionCommand {
 
         plugin.bundle().sendMessage(sender, "world.clone", placeholder);
         plugin.clone(world, builder -> {
-            tryGetArgument(context, "name", String.class).ifPresent(builder::name);
             tryGetArgument(context, "key", Key.class).ifPresent(builder::key);
         }, full).thenAccept(clone -> {
             if (sender instanceof final Player player) player.teleportAsync(clone.getSpawnLocation(), COMMAND);

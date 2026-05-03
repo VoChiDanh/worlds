@@ -1,6 +1,5 @@
 package net.thenextlvl.worlds.command;
 
-import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.ArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
@@ -18,8 +17,8 @@ import net.thenextlvl.worlds.command.argument.KeyArgument;
 import net.thenextlvl.worlds.command.argument.WorldPresetArgument;
 import net.thenextlvl.worlds.command.brigadier.OptionCommand;
 import net.thenextlvl.worlds.command.suggestion.WorldImportSuggestionProvider;
-import net.thenextlvl.worlds.generator.GeneratorType;
 import net.thenextlvl.worlds.generator.Generator;
+import net.thenextlvl.worlds.generator.GeneratorType;
 import net.thenextlvl.worlds.preset.Preset;
 import org.bukkit.entity.Entity;
 import org.jspecify.annotations.NullMarked;
@@ -47,7 +46,6 @@ final class WorldImportCommand extends OptionCommand {
         addOptions(command, false, Set.of(
                 new Option("dimension", new DimensionArgumentType(plugin)),
                 new Option("generator", new GeneratorArgument(plugin), "preset"),
-                new Option("name", StringArgumentType.string()),
                 new Option("preset", new WorldPresetArgument(plugin), "generator")
         ), null);
 
@@ -61,10 +59,7 @@ final class WorldImportCommand extends OptionCommand {
 
         final var preset = tryGetArgument(context, "preset", Preset.class).orElse(null);
         final var dimension = tryGetArgument(context, "dimension", Dimension.class).orElse(null);
-        final var displayName = tryGetArgument(context, "name", String.class).orElse(null);
         final var generator = tryGetArgument(context, "generator", Generator.class).orElse(null);
-
-        final var name = displayName != null ? displayName : key.asString();
 
         if (plugin.getWorldRegistry().isRegistered(key)) {
             CommandFailureHandler.handle(plugin, sender, new WorldOperationException(
@@ -73,10 +68,9 @@ final class WorldImportCommand extends OptionCommand {
             return 0;
         }
 
-        plugin.bundle().sendMessage(sender, "world.import", Placeholder.parsed("world", name));
+        plugin.bundle().sendMessage(sender, "world.import", Placeholder.parsed("world", key.asString()));
 
         final var build = Level.builder(key)
-                .name(displayName)
                 .generator(generator)
                 .generatorType(preset != null ? GeneratorType.FLAT.with(preset) : null)
                 .dimension(dimension)
@@ -89,7 +83,7 @@ final class WorldImportCommand extends OptionCommand {
             if (!(sender instanceof final Entity entity)) return;
             entity.teleportAsync(level.getSpawnLocation(), COMMAND);
         }).exceptionally(throwable -> {
-            CommandFailureHandler.handle(plugin, sender, throwable, Placeholder.parsed("world", name));
+            CommandFailureHandler.handle(plugin, sender, throwable, Placeholder.parsed("world", key.asString()));
             return null;
         });
 

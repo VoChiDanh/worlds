@@ -41,7 +41,7 @@ public final class WorldListener implements Listener {
         if (manager.getPermission(permission) != null) return;
         manager.addPermission(new Permission(
                 permission,
-                "Allows entering the world " + world.key().asString() + " (" + world.getName() + ")",
+                "Allows entering the world " + world.key().asString(),
                 PermissionDefault.TRUE
         ));
     }

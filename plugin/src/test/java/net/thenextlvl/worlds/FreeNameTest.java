@@ -10,6 +10,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.stream.Stream;
 
+// todo: rename to FreeKey/PathTest
 public class FreeNameTest {
     private static final Map<String, String> usedNames = new LinkedHashMap<>(Map.ofEntries(
             Map.entry("caves", "caves (3)"),

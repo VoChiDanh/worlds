@@ -1,7 +1,6 @@
 package net.thenextlvl.worlds.command;
 
 import com.mojang.brigadier.arguments.BoolArgumentType;
-import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.ArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
@@ -16,14 +15,13 @@ import net.thenextlvl.worlds.command.argument.DimensionArgumentType;
 import net.thenextlvl.worlds.command.argument.KeyArgument;
 import net.thenextlvl.worlds.command.argument.SeedArgument;
 import net.thenextlvl.worlds.command.brigadier.OptionCommand;
-import net.thenextlvl.worlds.generator.GeneratorType;
 import net.thenextlvl.worlds.generator.Generator;
+import net.thenextlvl.worlds.generator.GeneratorType;
 import net.thenextlvl.worlds.preset.Preset;
 import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.jspecify.annotations.NullMarked;
 
-import java.nio.file.Path;
 import java.util.Set;
 
 import static net.thenextlvl.worlds.command.WorldCommand.worldArgument;
@@ -42,30 +40,24 @@ final class WorldRecreateCommand extends OptionCommand {
 
     @Override
     protected RequiredArgumentBuilder<CommandSourceStack, ?> createCommand() {
-        final var name = Commands.argument("name", StringArgumentType.string());
+        final var key = Commands.argument("key", new KeyArgument());
 
-        addOptions(name, false, Set.of(
+        addOptions(key, false, Set.of(
                 new Option("bonus-chest", BoolArgumentType.bool()),
                 new Option("hardcore", BoolArgumentType.bool()),
                 new Option("dimension", new DimensionArgumentType(plugin)),
-                new Option("key", new KeyArgument()),
                 new Option("seed", new SeedArgument()),
                 new Option("structures", BoolArgumentType.bool())
         ), null);
 
-        return worldArgument(plugin).then(name.executes(this));
+        return worldArgument(plugin).then(key.executes(this));
     }
 
     @Override
     public int run(final CommandContext<CommandSourceStack> context) {
         final var sender = context.getSource().getSender();
         final var world = context.getArgument("world", World.class);
-        final var name = context.getArgument("name", String.class);
-
-        if (Path.of(name).getNameCount() != 1) {
-            plugin.bundle().sendMessage(sender, "world.container.create");
-            return 0;
-        }
+        final var key = context.getArgument("key", Key.class);
 
         final var builder = Level.copy(world);
 
@@ -73,14 +65,12 @@ final class WorldRecreateCommand extends OptionCommand {
         tryGetArgument(context, "dimension", Dimension.class).ifPresent(builder::dimension);
         tryGetArgument(context, "generator", Generator.class).ifPresent(builder::generator);
         tryGetArgument(context, "hardcore", Boolean.class).ifPresent(builder::hardcore);
-        tryGetArgument(context, "key", Key.class).ifPresentOrElse(builder::key, () ->
-                builder.key(plugin.levelView().findFreeKey(world.key())));
         tryGetArgument(context, "preset", Preset.class).map(GeneratorType.FLAT::with).ifPresent(builder::generatorType);
         tryGetArgument(context, "seed", Long.class).ifPresent(builder::seed);
         tryGetArgument(context, "structures", Boolean.class).ifPresent(builder::structures);
         tryGetArgument(context, "type", GeneratorType.class).ifPresent(builder::generatorType);
 
-        final var level = builder.name(name).build();
+        final var level = builder.key(key).build();
 
         final var placeholder = Placeholder.parsed("world", world.key().asString());
 
