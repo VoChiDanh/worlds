@@ -6,17 +6,15 @@ void or custom flat maps. Simply pick a predefined preset, or create your own!
 
 ### Why Choose Worlds?
 
-**Vanilla Flat World Preset** – No more extra plugins for void or flat maps  
-**No Extra Data Files** – Worlds doesn't store extra files, no more messy file syncing when sharing worlds  
-**Drag & Drop Import** – Just place the world in the folder & use /world import  
-**Full World Regeneration** – Reset any world (even the Overworld!) with one command  
-**Modern & Efficient** – Uses up-to-date server mechanics, not outdated methods  
-**World Keys** – Worlds are referenced by unique keys, improving compatibility with client mods  
-**World Linking** – Restore vanilla Nether and End portal behavior for custom worlds
-
-### What's Next?
-
-**Custom Dimension Creation** – Like datapacks, but usable from commands and API!
+- **Vanilla Flat World Preset** – No more extra plugins for void or flat maps
+- **Custom Dimensions** – Create datapack-style dimensions from commands and the API
+- **Single-Biome Worlds** – Generate worlds locked to one biome
+- **Minimal Extra Data** – Worlds only stores lightweight data for integrity
+- **Drag & Drop Import** – Just place the world in the folder & use /world import
+- **Full World Regeneration** – Reset any world (even the Overworld!) with one command
+- **Modern & Efficient** – Uses up-to-date server mechanics, not outdated methods
+- **World Keys** – Worlds are referenced by unique keys, improving compatibility with client mods
+- **World Linking** – Restore vanilla Nether and End portal behavior for custom worlds
 
 [Download now on Modrinth](https://modrinth.com/project/gBIw3Gvy)
 
