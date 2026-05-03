@@ -39,7 +39,7 @@ public final class PluginListener implements Listener {
             this.plugin.getComponentLogger().warn("It appears you are using a plugin to generate void worlds");
             this.plugin.getComponentLogger().warn("This is not required, and incompatible with Vanilla world generation");
             this.plugin.getComponentLogger().warn("Please use the preset 'the-void' instead");
-            this.plugin.getComponentLogger().warn("You can do this with the command '/world create <key> preset the-void'");
+            this.plugin.getComponentLogger().warn("You can do this with the command '/world create <key> type flat the-void'");
             this.plugin.getComponentLogger().warn("Read more at https://thenextlvl.net/blog/void-generator-plugins");
         });
 
