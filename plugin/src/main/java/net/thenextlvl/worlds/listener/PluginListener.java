@@ -21,7 +21,8 @@ public final class PluginListener implements Listener {
             "VoidGenPlus",
             "DeluxeVoidWorld",
             "CleanroomGenerator",
-            "CompletelyEmpty"
+            "CompletelyEmpty",
+            "TVoidGenerator"
     );
     private final WorldsPlugin plugin;
     private static boolean warn = false;
