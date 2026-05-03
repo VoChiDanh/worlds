@@ -61,7 +61,7 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
 
     public static final ErrorTracker ERROR_TRACKER = ErrorTracker.contextAware()
             .ignoreError(IllegalStateException.class, "World mismatch: expected .* but got .*")
-            .ignoreErrorType(AccessDeniedException.class);
+            .ignoreError(AccessDeniedException.class);
 
     private final GeneratorView generatorView = GeneratorView.view();
     private final PaperLevelView levelView = versionHandler.foliaSupport()
