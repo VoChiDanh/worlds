@@ -20,6 +20,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static net.thenextlvl.worlds.command.WorldCommand.worldArgument;
+import static net.thenextlvl.worlds.event.WorldActionScheduledEvent.ActionType.REGENERATE;
 
 @NullMarked
 final class WorldRegenerateCommand extends SimpleCommand {
@@ -62,6 +63,13 @@ final class WorldRegenerateCommand extends SimpleCommand {
 
         final var regenerateSeed = flags.contains("--seed");
         final var seed = regenerateSeed ? ThreadLocalRandom.current().nextLong() : world.getSeed();
+
+        if (schedule && plugin.getScheduler().cancel(world.key(), REGENERATE)) {
+            plugin.bundle().sendMessage(sender, "world.regenerate.schedule-cancelled",
+                    Placeholder.parsed("world", world.key().asString()));
+            return SINGLE_SUCCESS;
+        }
+
         final var future = !schedule ? plugin.regenerate(world, builder -> {
             if (regenerateSeed) builder.seed(seed);
         }).thenApply(ignored -> true) : CompletableFuture.completedFuture(plugin.getScheduler().schedule(

@@ -20,6 +20,7 @@ import org.jspecify.annotations.NullMarked;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
+import static net.thenextlvl.worlds.event.WorldActionScheduledEvent.ActionType.RESTORE_BACKUP;
 import static net.thenextlvl.worlds.command.WorldCommand.worldArgument;
 
 @NullMarked
@@ -75,6 +76,13 @@ final class WorldBackupRestoreCommand extends SimpleCommand {
             if (backup == null) {
                 plugin.bundle().sendMessage(context.getSource().getSender(), "world.backup.list.empty",
                         Placeholder.parsed("world", world.key().asString()));
+                return;
+            }
+
+            if (schedule && plugin.getScheduler().cancel(world.key(), RESTORE_BACKUP)) {
+                plugin.bundle().sendMessage(context.getSource().getSender(), "world.backup.restore.schedule-cancelled",
+                        Placeholder.parsed("world", world.key().asString()),
+                        Placeholder.parsed("backup", backup.name()));
                 return;
             }
 

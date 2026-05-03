@@ -18,6 +18,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import static net.thenextlvl.worlds.command.WorldCommand.worldArgument;
+import static net.thenextlvl.worlds.event.WorldActionScheduledEvent.ActionType.DELETE;
 
 @NullMarked
 final class WorldDeleteCommand extends SimpleCommand {
@@ -52,6 +53,13 @@ final class WorldDeleteCommand extends SimpleCommand {
         if (!flags.contains("--confirm") && !flags.contains("--schedule")) return confirmationNeeded(context);
         final var world = context.getArgument("world", World.class);
         final var schedule = flags.contains("--schedule");
+
+        if (schedule && plugin.getScheduler().cancel(world.key(), DELETE)) {
+            plugin.bundle().sendMessage(context.getSource().getSender(), "world.delete.schedule-cancelled",
+                    Placeholder.parsed("world", world.key().asString()));
+            return SINGLE_SUCCESS;
+        }
+
         final var future = !schedule ? plugin.delete(world)
                 : CompletableFuture.completedFuture(plugin.getScheduler().schedule(
                 new OperationScheduler.DeleteOperation(world.key())
