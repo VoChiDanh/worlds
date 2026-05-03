@@ -25,7 +25,6 @@ import net.thenextlvl.worlds.command.brigadier.BrigadierCommand;
 import net.thenextlvl.worlds.generator.Generator;
 import net.thenextlvl.worlds.generator.GeneratorType;
 import net.thenextlvl.worlds.preset.Preset;
-import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Entity;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
@@ -101,7 +100,7 @@ final class WorldCreateCommand extends BrigadierCommand {
 
     private int run(final CommandContext<CommandSourceStack> context, final @Nullable GeneratorType generatorType) {
         final var sender = context.getSource().getSender();
-        final var level = buildLevel(context, sender, generatorType);
+        final var level = buildLevel(context, generatorType);
         final var placeholder = Placeholder.parsed("world", level.key().asString());
 
         plugin.bundle().sendMessage(sender, "world.create", placeholder);
@@ -119,7 +118,6 @@ final class WorldCreateCommand extends BrigadierCommand {
 
     private Level buildLevel(
             final CommandContext<CommandSourceStack> context,
-            final CommandSender sender,
             final @Nullable GeneratorType generatorType
     ) {
         final var key = context.getArgument("key", Key.class);
