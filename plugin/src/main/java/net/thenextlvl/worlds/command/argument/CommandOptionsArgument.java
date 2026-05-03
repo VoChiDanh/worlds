@@ -26,10 +26,6 @@ public final class CommandOptionsArgument implements CustomArgumentType<CommandO
         this(toMap(options));
     }
 
-    public CommandOptionsArgument(final Set<String> options, final Map<String, ArgumentType<?>> arguments) {
-        this(toMap(options, arguments));
-    }
-
     public CommandOptionsArgument(final Map<String, @Nullable ArgumentType<?>> options) {
         this.options = options;
     }

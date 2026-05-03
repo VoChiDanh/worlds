@@ -20,8 +20,8 @@ import org.jspecify.annotations.NullMarked;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
-import static net.thenextlvl.worlds.event.WorldActionScheduledEvent.ActionType.RESTORE_BACKUP;
 import static net.thenextlvl.worlds.command.WorldCommand.worldArgument;
+import static net.thenextlvl.worlds.event.WorldActionScheduledEvent.ActionType.RESTORE_BACKUP;
 
 @NullMarked
 final class WorldBackupRestoreCommand extends SimpleCommand {
