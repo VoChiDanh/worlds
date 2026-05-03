@@ -32,6 +32,7 @@ public class SimpleBackupProvider implements BackupProvider {
     private static final BackupProvider INSTANCE = new SimpleBackupProvider();
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss")
             .withZone(ZoneId.systemDefault());
+    private final WorldsPlugin plugin = WorldsPlugin.getPlugin(WorldsPlugin.class);
 
     @Override
     public CompletableFuture<Backup> backup(final World world, @Nullable final String name) {
@@ -41,15 +42,15 @@ public class SimpleBackupProvider implements BackupProvider {
     @Override
     public CompletableFuture<World> restore(final World world, final Backup backup) {
         final var worldKey = world.key();
-        return WorldsAccess.access().unload(world, true).thenComposeAsync(success -> {
+        return plugin.unload(world, true).thenComposeAsync(success -> {
             if (!success) {
                 return CompletableFuture.failedFuture(new WorldOperationException(
                         WorldOperationException.Reason.UNLOAD_FAILED
                 ).world(worldKey.asString()));
             }
             restoreNow(worldKey, backup);
-            WorldsAccess.access().getScheduler().cancel(world, WorldActionScheduledEvent.ActionType.RESTORE_BACKUP);
-            return WorldsAccess.access().load(worldKey);
+            plugin.getScheduler().cancel(world, WorldActionScheduledEvent.ActionType.RESTORE_BACKUP);
+            return plugin.load(worldKey);
         });
     }
 
@@ -69,53 +70,52 @@ public class SimpleBackupProvider implements BackupProvider {
 
     @Override
     public CompletableFuture<Stream<Backup>> listBackups() {
-        final var worlds = WorldsAccess.access().getServer().getWorlds();
-        return CompletableFuture.supplyAsync(() -> worlds.stream().map(World::key)
+        final var worlds = plugin.getServer().getWorlds();
+        return CompletableFuture.completedFuture(worlds.stream().map(World::key)
                 .flatMap(this::listBackupFiles)
                 .sorted(Comparator.comparing(Backup::createdAt).reversed()));
     }
 
     @Override
     public CompletableFuture<Stream<Backup>> listBackups(final Key world) {
-        return CompletableFuture.supplyAsync(() -> listBackupFiles(world));
+        return CompletableFuture.completedFuture(listBackupFiles(world));
     }
 
     @Override
     public CompletableFuture<Optional<Backup>> findBackup(final Key world) {
-        return CompletableFuture.supplyAsync(() -> listBackupFiles(world).findFirst());
+        return CompletableFuture.completedFuture(listBackupFiles(world).findFirst());
     }
 
     @Override
     public CompletableFuture<Optional<Backup>> findBackup(final Key world, final String name) {
-        return CompletableFuture.supplyAsync(() -> {
-            final var path = resolveBackupPath(world, name);
-            if (!Files.isRegularFile(path)) return Optional.empty();
-            return Optional.of(toBackup(path, world));
-        });
+        return CompletableFuture.completedFuture(findBackupNow(world, name));
+    }
+
+    private Optional<Backup> findBackupNow(final Key world, final String name) {
+        final var path = resolveBackupPath(world, name);
+        if (!Files.isRegularFile(path)) return Optional.empty();
+        return Optional.of(toBackup(path, world));
     }
 
     @Override
     public CompletableFuture<Boolean> delete(final Key world, final String name) {
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                return Files.deleteIfExists(resolveBackupPath(world, name));
-            } catch (final IOException e) {
-                return false;
-            }
-        });
+        return delete(world, name, resolveBackupPath(world, name));
+    }
+
+    private CompletableFuture<Boolean> delete(final Key world, final String name, final Path path) {
+        try {
+            return CompletableFuture.completedFuture(Files.deleteIfExists(path));
+        } catch (final IOException e) {
+            plugin.getComponentLogger().warn("Failed to delete backup {} for world {}", name, world, e);
+            return CompletableFuture.completedFuture(false);
+        }
     }
 
     @Override
     public CompletableFuture<Boolean> delete(final Backup backup) {
         if (!(backup instanceof final FileBackup fileBackup))
             throw new IllegalStateException("Tried to delete backup from different provider");
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                return Files.deleteIfExists(fileBackup.path());
-            } catch (final IOException e) {
-                return false;
-            }
-        });
+        return delete(backup.key(), backup.name(), fileBackup.path());
     }
 
     private Path resolveBackupFolder(final Key key) {
@@ -126,7 +126,7 @@ public class SimpleBackupProvider implements BackupProvider {
         var backupFolder = System.getenv("WORLDS_BACKUP_FOLDER");
         if (backupFolder == null) backupFolder = System.getProperty("worlds.backup.folder");
         if (backupFolder != null) return Path.of(backupFolder);
-        final var parent = WorldsAccess.access().getServer().getLevelDirectory().getParent();
+        final var parent = plugin.getServer().getLevelDirectory().getParent();
         return parent != null ? parent.resolve("backups") : Path.of("backups");
     }
 
@@ -190,7 +190,7 @@ public class SimpleBackupProvider implements BackupProvider {
     }
 
     private void restoreBackup(final Key key, final Path backupFile) throws IOException {
-        final var worldDirectory = WorldsAccess.access().resolveLevelDirectory(key);
+        final var worldDirectory = plugin.resolveLevelDirectory(key);
         Path tempPath;
         do {
             tempPath = worldDirectory.resolveSibling("." + UUID.randomUUID());
@@ -235,6 +235,7 @@ public class SimpleBackupProvider implements BackupProvider {
                     .toList()
                     .stream();
         } catch (final IOException e) {
+            plugin.getComponentLogger().warn("Failed to list backups for {}", key, e);
             return Stream.empty();
         }
     }
