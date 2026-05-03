@@ -41,11 +41,6 @@ paper {
     foliaSupported = true
 
     permissions {
-        register("worlds.commands.admin") {
-            children = listOf("worlds.admin")
-            description = "Backwards compat for the new worlds.admin permission"
-        }
-
         register("worlds.admin") {
             description = "Allows access to all world commands"
             children = listOf(
