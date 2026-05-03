@@ -22,6 +22,7 @@ class CommandOptionsArgumentTest {
                 "other", StringArgumentType.string()
         ));
 
+        //noinspection DataFlowIssue
         final var suggestions = argument.listSuggestions(null, new SuggestionsBuilder("seed \"hello ", 0)).join();
 
         Assertions.assertTrue(suggestions.isEmpty());
@@ -34,6 +35,7 @@ class CommandOptionsArgumentTest {
                 "other", StringArgumentType.string()
         ));
 
+        //noinspection DataFlowIssue
         final var suggestions = argument.listSuggestions(null, new SuggestionsBuilder("seed \"hello\" ", 0)).join();
 
         Assertions.assertEquals(1, suggestions.getList().size());
@@ -47,6 +49,7 @@ class CommandOptionsArgumentTest {
                 "other", StringArgumentType.string()
         ));
 
+        //noinspection DataFlowIssue
         final var suggestions = argument.listSuggestions(null, new SuggestionsBuilder("seed \"hello\"", 0)).join();
 
         Assertions.assertTrue(suggestions.isEmpty());
@@ -59,6 +62,7 @@ class CommandOptionsArgumentTest {
                 "dimension", new SuggestingWordArgument("minecraft:the_nether")
         ));
 
+        //noinspection DataFlowIssue
         final var suggestions = argument.listSuggestions(null, new SuggestionsBuilder("dimension minecraft:the_ne", 0)).join();
 
         Assertions.assertEquals(1, suggestions.getList().size());

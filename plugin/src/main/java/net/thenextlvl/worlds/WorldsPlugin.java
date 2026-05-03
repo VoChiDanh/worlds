@@ -37,6 +37,7 @@ import org.bukkit.generator.ChunkGenerator;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.NullUnmarked;
 import org.jspecify.annotations.Nullable;
 
 import java.io.IOException;
@@ -134,6 +135,7 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
         return generatorView;
     }
 
+    @NullUnmarked
     public <T> CompletableFuture<T> supplyGlobal(final Supplier<CompletableFuture<T>> supplier) {
         final var foliaTickThread = RUNNING_FOLIA && Thread.currentThread().getClass().equals(handler().getTickThreadClass());
         if (foliaTickThread || getServer().isGlobalTickThread()) try {

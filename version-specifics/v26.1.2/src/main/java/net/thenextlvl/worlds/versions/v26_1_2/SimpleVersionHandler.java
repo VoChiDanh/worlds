@@ -328,6 +328,7 @@ public final class SimpleVersionHandler extends VersionHandler {
                 new PhantomSpawner(), new PatrolSpawner(), new CatSpawner(), new VillageSiege(), new WanderingTraderSpawner(savedDataStorage)
         );
 
+        //noinspection DataFlowIssue
         final ServerLevel serverLevel = new ServerLevel(
                 console,
                 console.executor,
