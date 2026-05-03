@@ -1,11 +1,9 @@
 package net.thenextlvl.worlds.versions;
 
-import net.thenextlvl.worlds.api.generator.DimensionType;
-import net.thenextlvl.worlds.api.generator.Generator;
-import net.thenextlvl.worlds.api.level.Level;
-import net.thenextlvl.worlds.api.view.LevelView;
+import net.thenextlvl.worlds.Dimension;
+import net.thenextlvl.worlds.Level;
+import net.thenextlvl.worlds.generator.GeneratorType;
 import org.bukkit.Location;
-import org.bukkit.NamespacedKey;
 import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
@@ -16,8 +14,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-
-import static org.bukkit.persistence.PersistentDataType.STRING;
+import java.util.stream.Stream;
 
 public abstract class VersionHandler {
     private final @Nullable FoliaSupport foliaSupport;
@@ -39,8 +36,6 @@ public abstract class VersionHandler {
 
     public abstract Class<?> getTickThreadClass();
 
-    public abstract String getOverworldName();
-
     public abstract boolean isDirectoryLockException(Throwable throwable);
 
     public abstract CompletableFuture<@Nullable Void> saveAsync(World world, boolean flush);
@@ -55,31 +50,15 @@ public abstract class VersionHandler {
 
     public abstract @Nullable Location getRespawnLocation(Player player, boolean load);
 
-    public abstract @Nullable Boolean hasBonusChest(final World world);
-
-    public abstract CompletableFuture<World> createAsync(Level level, LevelView levelView);
+    public abstract CompletableFuture<World> createAsync(Level level);
 
     public abstract String findAvailableName(Path path, String name, String format) throws IOException;
 
-    protected World.Environment toBukkit(final DimensionType type) {
-        if (type.equals(DimensionType.OVERWORLD)) return World.Environment.NORMAL;
-        if (type.equals(DimensionType.THE_NETHER)) return World.Environment.NETHER;
-        if (type.equals(DimensionType.THE_END)) return World.Environment.THE_END;
-        return World.Environment.CUSTOM;
-    }
+    public abstract GeneratorType getGeneratorType(World world);
 
-    protected void persistWorld(final LevelView levelView, final World world, final net.thenextlvl.worlds.api.generator.LevelStem dimension, final boolean enabled) {
-        final var worldKey = new NamespacedKey("worlds", "world_key");
-        final var dimensionKey = new NamespacedKey("worlds", "dimension");
-        world.getPersistentDataContainer().set(worldKey, STRING, world.key().asString());
-        world.getPersistentDataContainer().set(dimensionKey, STRING, dimension.dimensionType().key().asString());
-        levelView.setEnabled(world, enabled);
-    }
+    public abstract Stream<Dimension> listDimensions();
 
-    protected void persistGenerator(final World world, final Generator generator) {
-        final var generatorKey = new NamespacedKey("worlds", "generator");
-        world.getPersistentDataContainer().set(generatorKey, STRING, generator.asString());
-    }
+    public abstract Dimension getDimension(World world);
 
     public Optional<FoliaSupport> foliaSupport() {
         return Optional.ofNullable(foliaSupport);

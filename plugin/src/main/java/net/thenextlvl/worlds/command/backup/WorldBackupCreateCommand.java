@@ -9,13 +9,11 @@ import io.papermc.paper.command.brigadier.Commands;
 import net.kyori.adventure.text.minimessage.tag.resolver.Formatter;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.thenextlvl.worlds.WorldsPlugin;
+import net.thenextlvl.worlds.command.CommandFailureHandler;
 import net.thenextlvl.worlds.command.brigadier.BrigadierCommand;
 import org.bukkit.World;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
-
-import java.io.IOException;
-import java.nio.file.Files;
 
 import static net.thenextlvl.worlds.command.WorldCommand.worldArgument;
 
@@ -46,15 +44,10 @@ final class WorldBackupCreateCommand extends BrigadierCommand {
 
     private int backup(final CommandContext<CommandSourceStack> context, final World world, @Nullable final String name) {
         final var sender = context.getSource().getSender();
-        final var placeholder = Placeholder.parsed("world", world.getName());
+        final var placeholder = Placeholder.parsed("world", world.key().asString());
         plugin.bundle().sendMessage(sender, "world.backup", placeholder);
-        plugin.levelView().createBackupAsync(world, name).thenApply(path -> {
-            try {
-                return Files.size(path);
-            } catch (final IOException e) {
-                throw new RuntimeException("Failed to calculate backup size for " + path, e);
-            }
-        }).thenAccept(bytes -> {
+        plugin.createBackup(world, name).thenAccept(backup -> {
+            final var bytes = backup.size();
             final var kb = bytes / 1024d;
             final var mb = kb / 1024d;
             final var gb = mb / 1024d;
@@ -62,8 +55,8 @@ final class WorldBackupCreateCommand extends BrigadierCommand {
                     Formatter.number("size", gb >= 1 ? gb : mb >= 1 ? mb : kb >= 1 ? kb : bytes),
                     Formatter.choice("unit", gb >= 1 ? 0 : mb >= 1 ? 1 : kb >= 1 ? 2 : 3));
         }).exceptionally(throwable -> {
-            plugin.getComponentLogger().warn("Failed to backup world {}", world.getName(), throwable);
-            plugin.bundle().sendMessage(sender, "world.backup.failed", placeholder);
+            CommandFailureHandler.handle(plugin, sender, throwable, placeholder,
+                    Placeholder.parsed("backup", name != null ? name : ""));
             return null;
         });
         return Command.SINGLE_SUCCESS;

@@ -6,14 +6,13 @@ import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
 import net.kyori.adventure.key.Key;
 import net.thenextlvl.worlds.WorldsPlugin;
-import net.thenextlvl.worlds.api.generator.Generator;
 import net.thenextlvl.worlds.command.argument.GeneratorArgument;
 import net.thenextlvl.worlds.command.argument.KeyArgument;
 import net.thenextlvl.worlds.command.argument.WorldArgument;
 import net.thenextlvl.worlds.command.backup.WorldBackupCommand;
 import net.thenextlvl.worlds.command.brigadier.BrigadierCommand;
-import net.thenextlvl.worlds.command.link.WorldLinkCommand;
 import net.thenextlvl.worlds.command.suggestion.WorldSuggestionProvider;
+import net.thenextlvl.worlds.generator.Generator;
 import org.bukkit.World;
 import org.jspecify.annotations.NullMarked;
 
@@ -34,7 +33,6 @@ public final class WorldCommand extends BrigadierCommand {
                 .then(WorldDeleteCommand.create(plugin))
                 .then(WorldImportCommand.create(plugin))
                 .then(WorldInfoCommand.create(plugin))
-                .then(WorldLinkCommand.create(plugin))
                 .then(WorldListCommand.create(plugin))
                 .then(WorldLoadCommand.create(plugin))
                 .then(WorldRecreateCommand.create(plugin))

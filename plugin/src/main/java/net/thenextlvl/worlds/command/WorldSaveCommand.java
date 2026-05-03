@@ -36,13 +36,12 @@ final class WorldSaveCommand extends BrigadierCommand {
 
     private int save(final CommandContext<CommandSourceStack> context, final boolean flush) {
         final var world = context.getArgument("world", World.class);
-        final var placeholder = Placeholder.parsed("world", world.getName());
+        final var placeholder = Placeholder.parsed("world", world.key().asString());
         plugin.bundle().sendMessage(context.getSource().getSender(), "world.save", placeholder);
-        plugin.levelView().saveAsync(world, flush).thenAccept(ignored -> {
+        plugin.save(world, flush).thenAccept(ignored -> {
             plugin.bundle().sendMessage(context.getSource().getSender(), "world.save.success", placeholder);
         }).exceptionally(throwable -> {
-            plugin.bundle().sendMessage(context.getSource().getSender(), "world.save.failed", placeholder);
-            plugin.getComponentLogger().warn("Failed to save world {}", world.getName(), throwable);
+            CommandFailureHandler.handle(plugin, context.getSource().getSender(), throwable, placeholder);
             return null;
         });
         return Command.SINGLE_SUCCESS;

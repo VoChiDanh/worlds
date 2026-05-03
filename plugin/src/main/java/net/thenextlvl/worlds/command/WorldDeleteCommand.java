@@ -6,15 +6,19 @@ import com.mojang.brigadier.context.CommandContext;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
+import net.thenextlvl.worlds.OperationScheduler;
+import net.thenextlvl.worlds.WorldOperationException;
 import net.thenextlvl.worlds.WorldsPlugin;
-import net.thenextlvl.worlds.command.argument.CommandFlagsArgument;
+import net.thenextlvl.worlds.command.argument.CommandOptionsArgument;
 import net.thenextlvl.worlds.command.brigadier.SimpleCommand;
 import org.bukkit.World;
 import org.jspecify.annotations.NullMarked;
 
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 import static net.thenextlvl.worlds.command.WorldCommand.worldArgument;
+import static net.thenextlvl.worlds.event.WorldActionScheduledEvent.ActionType.DELETE;
 
 @NullMarked
 final class WorldDeleteCommand extends SimpleCommand {
@@ -29,7 +33,7 @@ final class WorldDeleteCommand extends SimpleCommand {
 
     private RequiredArgumentBuilder<CommandSourceStack, World> delete() {
         return worldArgument(plugin)
-                .then(Commands.argument("flags", new CommandFlagsArgument(
+                .then(Commands.argument("options", new CommandOptionsArgument(
                         Set.of("--confirm", "--schedule")
                 )).executes(this))
                 .executes(this::confirmationNeeded);
@@ -45,22 +49,35 @@ final class WorldDeleteCommand extends SimpleCommand {
 
     @Override
     public int run(final CommandContext<CommandSourceStack> context) {
-        final var flags = context.getArgument("flags", CommandFlagsArgument.Flags.class);
-        if (!flags.contains("--confirm")) return confirmationNeeded(context);
+        final var options = context.getArgument("options", CommandOptionsArgument.Options.class);
+        if (!options.contains("--confirm") && !options.contains("--schedule")) return confirmationNeeded(context);
         final var world = context.getArgument("world", World.class);
-        final var schedule = flags.contains("--schedule");
+        final var schedule = options.contains("--schedule");
+
+        if (schedule && plugin.getScheduler().cancel(world.key(), DELETE)) {
+            plugin.bundle().sendMessage(context.getSource().getSender(), "world.delete.schedule-cancelled",
+                    Placeholder.parsed("world", world.key().asString()));
+            return SINGLE_SUCCESS;
+        }
+
+        final var future = !schedule ? plugin.delete(world)
+                : CompletableFuture.completedFuture(plugin.getScheduler().schedule(
+                new OperationScheduler.DeleteOperation(world.key())
+        ));
         if (!schedule) plugin.bundle().sendMessage(context.getSource().getSender(), "world.delete",
-                Placeholder.parsed("world", world.getName()));
-        plugin.levelView().deleteAsync(world, schedule).thenAccept(result -> {
-            final var message = switch (result) {
-                case SUCCESS -> "world.delete.success";
-                case SCHEDULED -> "world.delete.scheduled";
-                case REQUIRES_SCHEDULING -> "world.delete.disallowed";
-                case UNLOAD_FAILED -> "world.unload.failed";
-                case FAILED -> "world.delete.failed";
-            };
-            plugin.bundle().sendMessage(context.getSource().getSender(), message,
-                    Placeholder.parsed("world", world.getName()));
+                Placeholder.parsed("world", world.key().asString()));
+        future.thenAccept(success -> {
+            if (success) {
+                final var message = schedule ? "world.delete.scheduled" : "world.delete.success";
+                plugin.bundle().sendMessage(context.getSource().getSender(), message,
+                        Placeholder.parsed("world", world.key().asString()));
+            } else CommandFailureHandler.handle(plugin, context.getSource().getSender(), new WorldOperationException(
+                    WorldOperationException.Reason.EVENT_CANCELLED
+            ));
+        }).exceptionally(throwable -> {
+            CommandFailureHandler.handle(plugin, context.getSource().getSender(), throwable,
+                    Placeholder.parsed("world", world.key().asString()));
+            return null;
         });
         return SINGLE_SUCCESS;
     }

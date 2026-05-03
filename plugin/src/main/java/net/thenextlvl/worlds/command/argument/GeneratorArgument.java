@@ -7,7 +7,7 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import net.thenextlvl.worlds.WorldsPlugin;
-import net.thenextlvl.worlds.api.generator.Generator;
+import net.thenextlvl.worlds.generator.Generator;
 import org.bukkit.plugin.Plugin;
 import org.jspecify.annotations.NullMarked;
 
@@ -24,7 +24,7 @@ public final class GeneratorArgument implements SimpleArgumentType<Generator, St
 
     @Override
     public Generator convert(final StringReader reader, final String type) {
-        return Generator.of(plugin, type);
+        return Generator.fromString(type);
     }
 
     @Override

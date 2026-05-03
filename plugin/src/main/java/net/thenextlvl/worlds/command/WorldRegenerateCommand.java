@@ -3,20 +3,23 @@ package net.thenextlvl.worlds.command;
 import com.mojang.brigadier.builder.ArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
-import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
-import net.kyori.adventure.util.TriState;
+import net.thenextlvl.worlds.OperationScheduler;
+import net.thenextlvl.worlds.WorldOperationException;
 import net.thenextlvl.worlds.WorldsPlugin;
-import net.thenextlvl.worlds.command.argument.CommandFlagsArgument;
+import net.thenextlvl.worlds.command.argument.CommandOptionsArgument;
 import net.thenextlvl.worlds.command.brigadier.SimpleCommand;
 import org.bukkit.World;
 import org.jspecify.annotations.NullMarked;
 
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static net.thenextlvl.worlds.command.WorldCommand.worldArgument;
+import static net.thenextlvl.worlds.event.WorldActionScheduledEvent.ActionType.REGENERATE;
 
 @NullMarked
 final class WorldRegenerateCommand extends SimpleCommand {
@@ -31,7 +34,7 @@ final class WorldRegenerateCommand extends SimpleCommand {
 
     private RequiredArgumentBuilder<CommandSourceStack, World> regenerate() {
         return worldArgument(plugin)
-                .then(Commands.argument("flags", new CommandFlagsArgument(
+                .then(Commands.argument("options", new CommandOptionsArgument(
                         Set.of("--confirm", "--schedule", "--seed")
                 )).executes(this))
                 .executes(this::confirmationNeeded);
@@ -46,29 +49,43 @@ final class WorldRegenerateCommand extends SimpleCommand {
     }
 
     @Override
-    public int run(final CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
-        final var flags = context.getArgument("flags", CommandFlagsArgument.Flags.class);
-        if (!flags.contains("--confirm")) return confirmationNeeded(context);
+    public int run(final CommandContext<CommandSourceStack> context) {
+        final var sender = context.getSource().getSender();
+        final var options = context.getArgument("options", CommandOptionsArgument.Options.class);
+        if (!options.contains("--confirm") && !options.contains("--schedule")) return confirmationNeeded(context);
+
         final var world = context.getArgument("world", World.class);
-        final var schedule = flags.contains("--schedule");
-        if (!schedule) plugin.bundle().sendMessage(context.getSource().getSender(), "world.regenerate",
-                Placeholder.parsed("world", world.getName()));
-        plugin.levelView().regenerateAsync(world, schedule, builder -> {
-            if (flags.contains("--seed")) builder.seed(null).initialized(TriState.FALSE);
-        }).thenAccept(result -> {
-            final var message = switch (result) {
-                case SUCCESS -> "world.regenerate.success";
-                case SCHEDULED -> "world.regenerate.scheduled";
-                case REQUIRES_SCHEDULING -> "world.regenerate.disallowed";
-                case UNLOAD_FAILED -> "world.unload.failed";
-                case FAILED -> "world.regenerate.failed";
-            };
-            plugin.bundle().sendMessage(context.getSource().getSender(), message,
-                    Placeholder.parsed("world", world.getName()));
+        final var schedule = options.contains("--schedule");
+
+        if (!schedule) plugin.bundle().sendMessage(sender, "world.regenerate",
+                Placeholder.parsed("world", world.key().asString()));
+
+        final var regenerateSeed = options.contains("--seed");
+        final var seed = regenerateSeed ? ThreadLocalRandom.current().nextLong() : world.getSeed();
+
+        if (schedule && plugin.getScheduler().cancel(world.key(), REGENERATE)) {
+            plugin.bundle().sendMessage(sender, "world.regenerate.schedule-cancelled",
+                    Placeholder.parsed("world", world.key().asString()));
+            return SINGLE_SUCCESS;
+        }
+
+        final var future = !schedule ? plugin.regenerate(world, builder -> {
+            if (regenerateSeed) builder.seed(seed);
+        }).thenApply(ignored -> true) : CompletableFuture.completedFuture(plugin.getScheduler().schedule(
+                new OperationScheduler.RegenerateOperation(world.key(), seed)
+        ));
+
+        future.thenAccept(success -> {
+            if (success) {
+                final var message = schedule ? "world.regenerate.scheduled" : "world.regenerate.success";
+                plugin.bundle().sendMessage(sender, message,
+                        Placeholder.parsed("world", world.key().asString()));
+            } else CommandFailureHandler.handle(plugin, sender, new WorldOperationException(
+                    WorldOperationException.Reason.EVENT_CANCELLED
+            ));
         }).exceptionally(throwable -> {
-            plugin.bundle().sendMessage(context.getSource().getSender(), "world.regenerate.failed",
-                    Placeholder.parsed("world", world.getName()));
-            plugin.getComponentLogger().warn("Failed to regenerate world {}", world.getName(), throwable);
+            CommandFailureHandler.handle(plugin, sender, throwable,
+                    Placeholder.parsed("world", world.key().asString()));
             return null;
         });
         return SINGLE_SUCCESS;

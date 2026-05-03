@@ -9,8 +9,7 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import net.thenextlvl.worlds.WorldsPlugin;
-import net.thenextlvl.worlds.api.preset.Preset;
-import net.thenextlvl.worlds.api.preset.Presets;
+import net.thenextlvl.worlds.preset.Preset;
 import org.jspecify.annotations.NullMarked;
 
 import java.io.BufferedInputStream;
@@ -21,15 +20,15 @@ import java.nio.file.Files;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 @NullMarked
 public final class WorldPresetArgument implements SimpleArgumentType<Preset, String> {
-    private static final Map<String, Preset> identifiers = Presets.presets().stream()
-            .filter(preset -> preset.name() != null).collect(Collectors.toMap(
-                    preset -> toIdentifier(Objects.requireNonNull(preset.name(), "Preset name cannot be null")),
+    private static final Map<String, Preset> identifiers = Preset.presets().stream()
+            .filter(preset -> preset.name().isPresent())
+            .collect(Collectors.toMap(
+                    preset -> toIdentifier(preset.name().orElseThrow()),
                     preset -> preset
             ));
 
@@ -52,7 +51,7 @@ public final class WorldPresetArgument implements SimpleArgumentType<Preset, Str
                 Files.newInputStream(file)
         ), StandardCharsets.UTF_8))) {
             final var root = JsonParser.parseReader(jsonReader);
-            if (root.isJsonObject()) return Preset.deserialize(root.getAsJsonObject());
+            if (root.isJsonObject()) return Preset.fromJson(root.getAsJsonObject());
             throw new IllegalStateException("Not a valid preset");
         } catch (final IOException e) {
             throw new IllegalStateException("Not a valid preset", e);

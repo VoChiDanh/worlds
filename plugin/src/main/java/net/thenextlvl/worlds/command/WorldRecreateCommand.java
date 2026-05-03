@@ -1,7 +1,6 @@
 package net.thenextlvl.worlds.command;
 
 import com.mojang.brigadier.arguments.BoolArgumentType;
-import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.ArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
@@ -9,27 +8,31 @@ import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
+import net.thenextlvl.worlds.Dimension;
+import net.thenextlvl.worlds.Level;
 import net.thenextlvl.worlds.WorldsPlugin;
-import net.thenextlvl.worlds.api.generator.Generator;
-import net.thenextlvl.worlds.api.generator.GeneratorType;
-import net.thenextlvl.worlds.api.generator.LevelStem;
-import net.thenextlvl.worlds.api.preset.Preset;
+import net.thenextlvl.worlds.command.argument.CommandOptionsArgument;
+import net.thenextlvl.worlds.command.argument.DimensionArgumentType;
+import net.thenextlvl.worlds.command.argument.GeneratorArgument;
+import net.thenextlvl.worlds.command.argument.GeneratorTypeArgument;
 import net.thenextlvl.worlds.command.argument.KeyArgument;
-import net.thenextlvl.worlds.command.argument.LevelStemArgument;
 import net.thenextlvl.worlds.command.argument.SeedArgument;
-import net.thenextlvl.worlds.command.brigadier.OptionCommand;
+import net.thenextlvl.worlds.command.argument.WorldPresetArgument;
+import net.thenextlvl.worlds.command.brigadier.SimpleCommand;
+import net.thenextlvl.worlds.generator.Generator;
+import net.thenextlvl.worlds.generator.GeneratorType;
+import net.thenextlvl.worlds.preset.Preset;
 import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.jspecify.annotations.NullMarked;
 
-import java.nio.file.Path;
-import java.util.Set;
+import java.util.Map;
 
 import static net.thenextlvl.worlds.command.WorldCommand.worldArgument;
 import static org.bukkit.event.player.PlayerTeleportEvent.TeleportCause.COMMAND;
 
 @NullMarked
-final class WorldRecreateCommand extends OptionCommand {
+final class WorldRecreateCommand extends SimpleCommand {
     private WorldRecreateCommand(final WorldsPlugin plugin) {
         super(plugin, "recreate", "worlds.command.recreate");
     }
@@ -39,58 +42,52 @@ final class WorldRecreateCommand extends OptionCommand {
         return command.create().then(command.createCommand());
     }
 
-    @Override
-    protected RequiredArgumentBuilder<CommandSourceStack, ?> createCommand() {
-        final var name = Commands.argument("name", StringArgumentType.string());
+    private RequiredArgumentBuilder<CommandSourceStack, ?> createCommand() {
+        final var key = Commands.argument("key", new KeyArgument());
+        final var options = Commands.argument("options", new CommandOptionsArgument(Map.of(
+                "bonus-chest", BoolArgumentType.bool(),
+                "dimension", new DimensionArgumentType(plugin),
+                "generator", new GeneratorArgument(plugin),
+                "hardcore", BoolArgumentType.bool(),
+                "preset", new WorldPresetArgument(plugin),
+                "seed", new SeedArgument(),
+                "structures", BoolArgumentType.bool(),
+                "type", new GeneratorTypeArgument(plugin)
+        ))).executes(this);
 
-        addOptions(name, false, Set.of(
-                new Option("bonus-chest", BoolArgumentType.bool()),
-                new Option("hardcore", BoolArgumentType.bool()),
-                new Option("dimension", new LevelStemArgument(plugin)),
-                new Option("key", new KeyArgument()),
-                new Option("seed", new SeedArgument()),
-                new Option("structures", BoolArgumentType.bool())
-        ), null);
-
-        return worldArgument(plugin).then(name.executes(this));
+        return worldArgument(plugin).then(key.then(options).executes(this));
     }
 
     @Override
     public int run(final CommandContext<CommandSourceStack> context) {
         final var sender = context.getSource().getSender();
         final var world = context.getArgument("world", World.class);
-        final var name = context.getArgument("name", String.class);
+        final var key = context.getArgument("key", Key.class);
+        final var options = tryGetArgument(context, "options", CommandOptionsArgument.Options.class)
+                .orElseGet(CommandOptionsArgument.Options::new);
 
-        if (Path.of(name).getNameCount() != 1) {
-            plugin.bundle().sendMessage(sender, "world.container.create");
-            return 0;
-        }
+        final var builder = Level.copy(world);
 
-        final var builder = plugin.levelBuilder(world).directory(plugin.levelView().findFreePath(name));
+        options.getArgument("bonus-chest", Boolean.class).ifPresent(builder::bonusChest);
+        options.getArgument("dimension", Dimension.class).ifPresent(builder::dimension);
+        options.getArgument("generator", Generator.class).ifPresent(builder::generator);
+        options.getArgument("hardcore", Boolean.class).ifPresent(builder::hardcore);
+        options.getArgument("preset", Preset.class).map(GeneratorType.FLAT::with).ifPresent(builder::generatorType);
+        options.getArgument("seed", Long.class).ifPresent(builder::seed);
+        options.getArgument("structures", Boolean.class).ifPresent(builder::structures);
+        options.getArgument("type", GeneratorType.class).ifPresent(builder::generatorType);
 
-        tryGetArgument(context, "bonus-chest", Boolean.class).ifPresent(builder::bonusChest);
-        tryGetArgument(context, "dimension", LevelStem.class).ifPresent(builder::levelStem);
-        tryGetArgument(context, "generator", Generator.class).ifPresent(builder::generator);
-        tryGetArgument(context, "hardcore", Boolean.class).ifPresent(builder::hardcore);
-        tryGetArgument(context, "key", Key.class).ifPresentOrElse(builder::key, () ->
-                builder.key(plugin.levelView().findFreeKey(world.key())));
-        tryGetArgument(context, "preset", Preset.class).ifPresent(builder::preset);
-        tryGetArgument(context, "seed", Long.class).ifPresent(builder::seed);
-        tryGetArgument(context, "structures", Boolean.class).ifPresent(builder::structures);
-        tryGetArgument(context, "type", GeneratorType.class).ifPresent(builder::generatorType);
+        final var level = builder.key(key).build();
 
-        final var level = builder.name(name).build();
-
-        final var placeholder = Placeholder.parsed("world", world.getName());
+        final var placeholder = Placeholder.parsed("world", world.key().asString());
 
         plugin.bundle().sendMessage(sender, "world.recreate", placeholder);
-        level.createAsync().thenAccept(recreated -> {
+        level.create().thenAccept(recreated -> {
             plugin.bundle().sendMessage(sender, "world.recreate.success", placeholder);
             if (!(sender instanceof final Entity entity)) return;
             entity.teleportAsync(recreated.getSpawnLocation(), COMMAND);
         }).exceptionally(throwable -> {
-            plugin.getComponentLogger().warn("Failed to recreate world {}", world.getName(), throwable);
-            plugin.bundle().sendMessage(sender, "world.recreate.failed", placeholder);
+            CommandFailureHandler.handle(plugin, sender, throwable, placeholder);
             return null;
         });
         return SINGLE_SUCCESS;

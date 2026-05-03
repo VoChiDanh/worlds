@@ -1,39 +1,40 @@
 package net.thenextlvl.worlds.command;
 
+import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.BoolArgumentType;
-import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.ArgumentBuilder;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
+import io.papermc.paper.command.brigadier.argument.ArgumentTypes;
+import io.papermc.paper.registry.RegistryKey;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
+import net.thenextlvl.worlds.Dimension;
+import net.thenextlvl.worlds.Level;
 import net.thenextlvl.worlds.WorldsPlugin;
-import net.thenextlvl.worlds.api.generator.Generator;
-import net.thenextlvl.worlds.api.generator.GeneratorType;
-import net.thenextlvl.worlds.api.generator.LevelStem;
-import net.thenextlvl.worlds.api.level.Level;
-import net.thenextlvl.worlds.api.preset.Preset;
+import net.thenextlvl.worlds.command.argument.CommandOptionsArgument;
+import net.thenextlvl.worlds.command.argument.DimensionArgumentType;
 import net.thenextlvl.worlds.command.argument.GeneratorArgument;
-import net.thenextlvl.worlds.command.argument.GeneratorTypeArgument;
 import net.thenextlvl.worlds.command.argument.KeyArgument;
-import net.thenextlvl.worlds.command.argument.LevelStemArgument;
 import net.thenextlvl.worlds.command.argument.SeedArgument;
 import net.thenextlvl.worlds.command.argument.WorldPresetArgument;
-import net.thenextlvl.worlds.command.brigadier.OptionCommand;
-import org.bukkit.command.CommandSender;
+import net.thenextlvl.worlds.command.brigadier.BrigadierCommand;
+import net.thenextlvl.worlds.generator.Generator;
+import net.thenextlvl.worlds.generator.GeneratorType;
+import net.thenextlvl.worlds.preset.Preset;
 import org.bukkit.entity.Entity;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
-import java.nio.file.Path;
-import java.util.Set;
+import java.util.Map;
 
 import static org.bukkit.event.player.PlayerTeleportEvent.TeleportCause.COMMAND;
 
 @NullMarked
-final class WorldCreateCommand extends OptionCommand {
+final class WorldCreateCommand extends BrigadierCommand {
     private WorldCreateCommand(final WorldsPlugin plugin) {
         super(plugin, "create", "worlds.command.create");
     }
@@ -43,76 +44,112 @@ final class WorldCreateCommand extends OptionCommand {
         return command.create().then(command.createCommand());
     }
 
-    @Override
-    protected RequiredArgumentBuilder<CommandSourceStack, ?> createCommand() {
-        final var name = Commands.argument("name", StringArgumentType.string());
+    private RequiredArgumentBuilder<CommandSourceStack, ?> createCommand() {
+        final var generator = Commands.argument("generator", new GeneratorArgument(plugin))
+                .then(createOptionsArgument())
+                .executes(context -> run(context, null));
 
-        addOptions(name, true, Set.of(
-                new Option("generator", new GeneratorArgument(plugin)),
-                new Option("preset", new WorldPresetArgument(plugin)),
-                new Option("type", new GeneratorTypeArgument(plugin))
-        ), builder -> addOptions(builder, false, Set.of(
-                new Option("bonus-chest", BoolArgumentType.bool()),
-                new Option("hardcore", BoolArgumentType.bool()),
-                new Option("dimension", new LevelStemArgument(plugin)),
-                new Option("key", new KeyArgument()),
-                new Option("seed", new SeedArgument()),
-                new Option("structures", BoolArgumentType.bool())
-        ), null));
+        final var type = Commands.literal("type");
+        createTypeArgument(type, GeneratorType.AMPLIFIED, createOptionsArgument(GeneratorType.AMPLIFIED));
+        createTypeArgument(type, GeneratorType.DEBUG, createOptionsArgument(GeneratorType.DEBUG));
+        createTypeArgument(type, GeneratorType.FLAT, createPresetArgument());
+        createTypeArgument(type, GeneratorType.LARGE_BIOMES, createOptionsArgument(GeneratorType.LARGE_BIOMES));
+        createTypeArgument(type, GeneratorType.NORMAL, createOptionsArgument(GeneratorType.NORMAL));
+        createTypeArgument(type, GeneratorType.SINGLE_BIOME, createBiomeArgument());
 
-        return name.executes(this);
+        return Commands.argument("key", new KeyArgument())
+                .then(Commands.literal("generator").then(generator))
+                .then(type)
+                .executes(context -> run(context, GeneratorType.NORMAL));
     }
 
-    @Override
-    public int run(final CommandContext<CommandSourceStack> context) {
-        final var sender = context.getSource().getSender();
-        final var level = buildLevel(context, sender);
-        if (level == null) return 0;
+    private RequiredArgumentBuilder<CommandSourceStack, ?> createOptionsArgument() {
+        return createOptionsArgument(null);
+    }
 
-        final var placeholder = Placeholder.parsed("world", level.getName());
-        if (plugin.getServer().getWorld(level.getName()) != null) {
-            plugin.bundle().sendMessage(sender, "world.name.taken", placeholder);
-            return 0;
-        } else if (plugin.getServer().getWorld(level.key()) != null) {
-            plugin.bundle().sendMessage(sender, "world.key.taken", Placeholder.parsed("key", level.key().asString()));
-            return 0;
-        }
+    private RequiredArgumentBuilder<CommandSourceStack, ?> createPresetArgument() {
+        return Commands.argument("preset", new WorldPresetArgument(plugin))
+                .then(createOptionsArgument(GeneratorType.FLAT))
+                .executes(context -> run(context, GeneratorType.FLAT));
+    }
+
+    private RequiredArgumentBuilder<CommandSourceStack, ?> createBiomeArgument() {
+        return Commands.argument("biome", ArgumentTypes.resourceKey(RegistryKey.BIOME))
+                .then(createOptionsArgument(GeneratorType.SINGLE_BIOME))
+                .executes(context -> run(context, GeneratorType.SINGLE_BIOME));
+    }
+
+    private RequiredArgumentBuilder<CommandSourceStack, ?> createOptionsArgument(final @Nullable GeneratorType generatorType) {
+        return Commands.argument("options", new CommandOptionsArgument(Map.of(
+                "bonus-chest", BoolArgumentType.bool(),
+                "dimension", new DimensionArgumentType(plugin),
+                "hardcore", BoolArgumentType.bool(),
+                "seed", new SeedArgument(),
+                "structures", BoolArgumentType.bool()
+        ))).executes(context -> run(context, generatorType));
+    }
+
+    private LiteralArgumentBuilder<CommandSourceStack> createTypeArgument(
+            final LiteralArgumentBuilder<CommandSourceStack> type,
+            final GeneratorType generatorType,
+            final ArgumentBuilder<CommandSourceStack, ?> leaf) {
+        final var literal = Commands.literal(generatorType.name()).then(leaf).executes(context -> run(context, generatorType));
+        type.then(literal);
+        return literal;
+    }
+
+    private int run(final CommandContext<CommandSourceStack> context, final @Nullable GeneratorType generatorType) {
+        final var sender = context.getSource().getSender();
+        final var level = buildLevel(context, generatorType);
+        final var placeholder = Placeholder.parsed("world", level.key().asString());
 
         plugin.bundle().sendMessage(sender, "world.create", placeholder);
-        level.createAsync().thenAccept(world -> {
+        level.create().thenAccept(world -> {
+            plugin.getWorldRegistry().register(level, true);
             plugin.bundle().sendMessage(sender, "world.create.success", placeholder);
             if (!(sender instanceof final Entity entity)) return;
             entity.teleportAsync(world.getSpawnLocation(), COMMAND);
         }).exceptionally(throwable -> {
-            plugin.getComponentLogger().warn("Failed to create world {} ({})", level.key(), level.getName(), throwable);
-            plugin.bundle().sendMessage(sender, "world.create.failed", placeholder);
+            CommandFailureHandler.handle(plugin, sender, throwable, placeholder);
             return null;
         });
-        return SINGLE_SUCCESS;
+        return Command.SINGLE_SUCCESS;
     }
 
-    private @Nullable Level buildLevel(final CommandContext<CommandSourceStack> context, final CommandSender sender) {
-        final var name = context.getArgument("name", String.class);
-        if (Path.of(name).getNameCount() != 1) {
-            plugin.bundle().sendMessage(sender, "world.container.create");
-            return null;
-        } else try {
-            return plugin.levelBuilder(plugin.levelView().findFreePath(name))
-                    .levelStem(tryGetArgument(context, "dimension", LevelStem.class).orElse(null))
-                    .generator(tryGetArgument(context, "generator", Generator.class).orElse(null))
-                    .key(tryGetArgument(context, "key", Key.class).orElse(null))
-                    .preset(tryGetArgument(context, "preset", Preset.class).orElse(null))
-                    .seed(tryGetArgument(context, "seed", Long.class).orElse(null))
-                    .structures(tryGetArgument(context, "structures", Boolean.class).orElse(null))
-                    .generatorType(tryGetArgument(context, "type", GeneratorType.class).orElse(null))
-                    .bonusChest(tryGetArgument(context, "bonus-chest", Boolean.class).orElse(null))
-                    .hardcore(tryGetArgument(context, "hardcore", Boolean.class).orElse(null))
-                    .name(name)
-                    .build();
-        } catch (final Exception e) {
-            plugin.getComponentLogger().warn("Failed to create world {}", name, e);
-            plugin.bundle().sendMessage(sender, "world.create.failed", Placeholder.parsed("world", name));
-            return null;
-        }
+    private Level buildLevel(
+            final CommandContext<CommandSourceStack> context,
+            final @Nullable GeneratorType generatorType
+    ) {
+        final var key = context.getArgument("key", Key.class);
+
+        final var options = tryGetArgument(context, "options", CommandOptionsArgument.Options.class)
+                .orElseGet(CommandOptionsArgument.Options::new);
+        final var bonusChest = options.getArgument("bonus-chest", boolean.class).orElse(null);
+        final var dimension = options.getArgument("dimension", Dimension.class).orElse(null);
+        final var hardcore = options.getArgument("hardcore", Boolean.class).orElse(null);
+        final var seed = options.getArgument("seed", Long.class).orElse(null);
+        final var structures = options.getArgument("structures", Boolean.class).orElse(null);
+
+        final var generator = tryGetArgument(context, "generator", Generator.class).orElse(null);
+        final var type = generatorType != null ? getGeneratorType(context, generatorType) : null;
+
+        return Level.builder(key)
+                .dimension(dimension)
+                .generator(generator)
+                .seed(seed)
+                .structures(structures)
+                .generatorType(type)
+                .bonusChest(bonusChest)
+                .hardcore(hardcore)
+                .build();
+    }
+
+    private GeneratorType getGeneratorType(
+            final CommandContext<CommandSourceStack> context,
+            final GeneratorType generatorType
+    ) {
+        return tryGetArgument(context, "preset", Preset.class).<GeneratorType>map(GeneratorType.FLAT::with)
+                .or(() -> tryGetArgument(context, "biome", Key.class).map(GeneratorType.SINGLE_BIOME::with))
+                .orElse(generatorType);
     }
 }

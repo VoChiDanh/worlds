@@ -12,10 +12,6 @@ import net.thenextlvl.worlds.command.suggestion.BackupSuggestionProvider;
 import org.bukkit.World;
 import org.jspecify.annotations.NullMarked;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-
 import static net.thenextlvl.worlds.command.WorldCommand.worldArgument;
 
 @NullMarked
@@ -36,23 +32,12 @@ final class WorldBackupDeleteCommand extends SimpleCommand {
     public int run(final CommandContext<CommandSourceStack> context) {
         final var world = context.getArgument("world", World.class);
         final var backup = context.getArgument("backup", String.class);
-        final var resolved = plugin.levelView().getBackupFolder(world).resolve(backup + ".zip");
-        final var success = delete(world, resolved);
-        final var message = success ? "world.backup.delete.success" : "world.backup.delete.failed";
-        plugin.bundle().sendMessage(context.getSource().getSender(), message,
-                Placeholder.parsed("world", world.getName()),
-                Placeholder.parsed("identifier", backup));
-        return success ? SINGLE_SUCCESS : 0;
-    }
-
-    private boolean delete(final World world, final Path backup) {
-        try {
-            if (!Files.isRegularFile(backup)) return false;
-            Files.delete(backup);
-            return true;
-        } catch (final IOException e) {
-            plugin.getComponentLogger().warn("Failed to delete backup of world {} from {}", world.getName(), backup, e);
-            return false;
-        }
+        plugin.getBackupProvider().delete(world, backup).thenAccept(success -> {
+            final var message = success ? "world.backup.delete.success" : "world.backup.delete.failed";
+            plugin.bundle().sendMessage(context.getSource().getSender(), message,
+                    Placeholder.parsed("world", world.key().asString()),
+                    Placeholder.parsed("backup", backup));
+        });
+        return SINGLE_SUCCESS;
     }
 }

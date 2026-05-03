@@ -7,19 +7,21 @@ import com.mojang.brigadier.context.CommandContext;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
+import net.thenextlvl.worlds.OperationScheduler;
+import net.thenextlvl.worlds.WorldOperationException;
 import net.thenextlvl.worlds.WorldsPlugin;
-import net.thenextlvl.worlds.command.argument.CommandFlagsArgument;
+import net.thenextlvl.worlds.command.CommandFailureHandler;
+import net.thenextlvl.worlds.command.argument.CommandOptionsArgument;
 import net.thenextlvl.worlds.command.brigadier.SimpleCommand;
 import net.thenextlvl.worlds.command.suggestion.BackupSuggestionProvider;
 import org.bukkit.World;
 import org.jspecify.annotations.NullMarked;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 import static net.thenextlvl.worlds.command.WorldCommand.worldArgument;
+import static net.thenextlvl.worlds.event.WorldActionScheduledEvent.ActionType.RESTORE_BACKUP;
 
 @NullMarked
 final class WorldBackupRestoreCommand extends SimpleCommand {
@@ -40,7 +42,7 @@ final class WorldBackupRestoreCommand extends SimpleCommand {
     }
 
     private ArgumentBuilder<CommandSourceStack, ?> x(final ArgumentBuilder<CommandSourceStack, ?> command) {
-        return command.then(Commands.argument("flags", new CommandFlagsArgument(
+        return command.then(Commands.argument("options", new CommandOptionsArgument(
                         Set.of("--confirm", "--schedule")
                 )).executes(this))
                 .executes(this::confirmationNeeded);
@@ -56,52 +58,52 @@ final class WorldBackupRestoreCommand extends SimpleCommand {
 
     @Override
     public int run(final CommandContext<CommandSourceStack> context) {
-        final var flags = context.getArgument("flags", CommandFlagsArgument.Flags.class);
-        if (!flags.contains("--confirm")) return confirmationNeeded(context);
+        final var options = context.getArgument("options", CommandOptionsArgument.Options.class);
+        if (!options.contains("--confirm") && !options.contains("--schedule")) return confirmationNeeded(context);
         final var world = context.getArgument("world", World.class);
-        final var backup = tryGetArgument(context, "backup", String.class);
-        final var schedule = flags.contains("--schedule");
+        final var name = tryGetArgument(context, "backup", String.class);
+        final var schedule = options.contains("--schedule");
         if (!schedule) plugin.bundle().sendMessage(context.getSource().getSender(), "world.backup.restore",
-                Placeholder.parsed("world", world.getName()));
+                Placeholder.parsed("world", world.key().asString()));
 
-        final var path = backup.map(name -> plugin.levelView().getBackupFolder(world).resolve(name + ".zip")).or(() -> {
-            return plugin.levelView().listBackups(world).min((first, second) -> {
-                try {
-                    final var time1 = Files.readAttributes(first, BasicFileAttributes.class).creationTime();
-                    final var time2 = Files.readAttributes(second, BasicFileAttributes.class).creationTime();
-                    return time2.compareTo(time1);
-                } catch (final IOException e) {
-                    return 0;
-                }
+        final var resolved = name
+                .map(value -> plugin.getBackupProvider().findBackup(world, value))
+                .orElseGet(() -> plugin.getBackupProvider().findBackup(world));
+
+        resolved.thenAccept(optional -> {
+            final var backup = optional.orElse(null);
+
+            if (backup == null) {
+                plugin.bundle().sendMessage(context.getSource().getSender(), "world.backup.list.empty",
+                        Placeholder.parsed("world", world.key().asString()));
+                return;
+            }
+
+            if (schedule && plugin.getScheduler().cancel(world.key(), RESTORE_BACKUP)) {
+                plugin.bundle().sendMessage(context.getSource().getSender(), "world.backup.restore.schedule-cancelled",
+                        Placeholder.parsed("world", world.key().asString()),
+                        Placeholder.parsed("backup", backup.name()));
+                return;
+            }
+
+            final var future = !schedule ? plugin.restoreBackup(world, backup).thenApply(ignored -> true)
+                    : CompletableFuture.completedFuture(plugin.getScheduler().schedule(
+                    new OperationScheduler.BackupRestoreOperation(world.key(), backup.name())
+            ));
+            future.thenAccept(success -> {
+                if (success) {
+                    final var message = schedule ? "world.backup.restore.scheduled" : "world.backup.restore.success";
+                    plugin.bundle().sendMessage(context.getSource().getSender(), message,
+                            Placeholder.parsed("world", world.key().asString()),
+                            Placeholder.parsed("backup", backup.name()));
+                } else CommandFailureHandler.handle(plugin, context.getSource().getSender(),
+                        new WorldOperationException(WorldOperationException.Reason.EVENT_CANCELLED));
+            }).exceptionally(throwable -> {
+                CommandFailureHandler.handle(plugin, context.getSource().getSender(), throwable,
+                        Placeholder.parsed("world", world.key().asString()),
+                        Placeholder.parsed("backup", backup.name()));
+                return null;
             });
-        }).orElse(null);
-
-        if (path == null) {
-            plugin.bundle().sendMessage(context.getSource().getSender(), "world.backup.list.empty",
-                    Placeholder.parsed("world", world.getName()));
-            return 0;
-        }
-
-        final var string = path.getFileName().toString();
-        final var backupName = backup.orElse(string.substring(0, string.lastIndexOf('.')));
-
-        plugin.levelView().restoreBackupAsync(world, path, schedule).thenAccept(result -> {
-            final var message = switch (result.result()) {
-                case SUCCESS -> "world.backup.restore.success";
-                case SCHEDULED -> "world.backup.restore.scheduled";
-                case REQUIRES_SCHEDULING -> "world.backup.restore.disallowed";
-                case UNLOAD_FAILED -> "world.unload.failed";
-                case FAILED -> "world.backup.restore.failed";
-            };
-            plugin.bundle().sendMessage(context.getSource().getSender(), message,
-                    Placeholder.parsed("world", result.world() != null ? result.world().getName() : world.getName()),
-                    Placeholder.parsed("identifier", backupName));
-        }).exceptionally(throwable -> {
-            plugin.bundle().sendMessage(context.getSource().getSender(), "world.backup.restore.failed",
-                    Placeholder.parsed("world", world.getName()),
-                    Placeholder.parsed("identifier", backupName));
-            plugin.getComponentLogger().warn("Failed to restore backup of world {} from {}", world.getName(), backupName, throwable);
-            return null;
         });
         return SINGLE_SUCCESS;
     }

@@ -6,6 +6,7 @@ import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
+import net.thenextlvl.worlds.Backup;
 import net.thenextlvl.worlds.WorldsPlugin;
 import org.bukkit.World;
 import org.jspecify.annotations.NullMarked;
@@ -23,11 +24,9 @@ public final class BackupSuggestionProvider implements SuggestionProvider<Comman
     @Override
     public CompletableFuture<Suggestions> getSuggestions(final CommandContext<CommandSourceStack> context, final SuggestionsBuilder builder) {
         final var world = context.getArgument("world", World.class);
-        return CompletableFuture.runAsync(() -> plugin.levelView().listBackups(world)
-                        .map(backup -> {
-                            final var string = backup.getFileName().toString();
-                            return string.substring(0, string.lastIndexOf('.'));
-                        })
+        return plugin.getBackupProvider().listBackups(world)
+                .thenAccept(backups -> backups
+                        .map(Backup::name)
                         .map(StringArgumentType::escapeIfRequired)
                         .filter(s -> s.contains(builder.getRemaining()))
                         .forEach(builder::suggest))

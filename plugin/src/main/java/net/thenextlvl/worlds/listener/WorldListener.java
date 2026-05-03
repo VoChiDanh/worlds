@@ -1,20 +1,16 @@
 package net.thenextlvl.worlds.listener;
 
-import net.kyori.adventure.util.TriState;
+import net.kyori.adventure.key.Key;
+import net.thenextlvl.worlds.Dimension;
+import net.thenextlvl.worlds.WorldRegistry;
 import net.thenextlvl.worlds.WorldsPlugin;
-import net.thenextlvl.worlds.api.level.Level;
-import net.thenextlvl.worlds.api.link.LinkTree;
 import org.bukkit.World;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.world.WorldLoadEvent;
-import org.bukkit.event.world.WorldSaveEvent;
-import org.bukkit.event.world.WorldUnloadEvent;
 import org.bukkit.permissions.Permission;
 import org.bukkit.permissions.PermissionDefault;
-
-import java.nio.file.Path;
 
 public final class WorldListener implements Listener {
     private final WorldsPlugin plugin;
@@ -24,74 +20,53 @@ public final class WorldListener implements Listener {
     }
 
     @EventHandler(priority = EventPriority.LOWEST)
-    public void onOverworldLoad(final WorldLoadEvent event) {
+    public void onWorldLoad(final WorldLoadEvent event) {
         registerEntryPermission(event.getWorld());
+
+        if (plugin.levelView().isNether(event.getWorld())) {
+            plugin.getWorldRegistry().registerIfAbsent(event.getWorld().key(), Dimension.THE_NETHER, true, null);
+        } else if (plugin.levelView().isEnd(event.getWorld())) {
+            plugin.getWorldRegistry().registerIfAbsent(event.getWorld().key(), Dimension.THE_END, true, null);
+        }
+
         if (!plugin.levelView().isOverworld(event.getWorld())) return;
-        plugin.levelView().listLevels().stream()
-                .filter(plugin.levelView()::canLoad)
-                .forEach(this::loadLevel);
+        plugin.getWorldRegistry().entrySet()
+                .filter(entry -> entry.getValue().enabled())
+                .forEach(entry -> loadLevel(entry.getKey(), entry.getValue()));
     }
 
     private void registerEntryPermission(final World world) {
         final var manager = plugin.getServer().getPluginManager();
-        final var permission = plugin.levelView().getEntryPermission(world);
+        final var permission = plugin.getEntryPermission(world);
         if (manager.getPermission(permission) != null) return;
         manager.addPermission(new Permission(
                 permission,
-                "Allows entering the world " + world.key().asString() + " (" + world.getName() + ")",
+                "Allows entering the world " + world.key().asString(),
                 PermissionDefault.TRUE
         ));
     }
 
-    private void loadLevel(final Path path) {
-        final var level = plugin.levelView().read(path).map(Level.Builder::build).orElse(null);
-        if (level == null || !level.isEnabled().equals(TriState.TRUE)) return;
+    private void loadLevel(final Key key, final WorldRegistry.Entry entry) {
+        final var level = plugin.levelView().read(key, entry).build();
 
-        if (plugin.getServer().getWorld(level.key()) != null) {
-            plugin.getComponentLogger().warn("Skip loading dimension '{}' because another world with the same key ({}) is already loaded", path.getFileName(), level.key());
-            return;
-        }
-        if (plugin.getServer().getWorld(level.getName()) != null) {
-            plugin.getComponentLogger().warn("Skip loading dimension '{}' because another world with the same name ({}) is already loaded", path.getFileName(), level.getName());
-            return;
-        }
+        if (plugin.getServer().getWorld(level.key()) != null) return;
+        if (plugin.getServer().getWorld(level.getName()) != null) return;
 
-        level.createAsync().thenAccept(world -> plugin.getComponentLogger().debug(
+        level.create().thenAccept(world -> plugin.getComponentLogger().debug(
                 "Loaded dimension {} ({}) from {}",
                 world.key().asString(), level.getGeneratorType().key().asString(),
-                world.getWorldFolder().getPath()
+                world.getWorldPath()
         )).exceptionally(throwable -> {
-            if (plugin.handler().isDirectoryLockException(throwable)) {
-                plugin.getComponentLogger().error("Failed to start the minecraft server", throwable.getCause());
+            final var t = throwable.getCause() != null ? throwable.getCause() : throwable;
+            if (plugin.handler().isDirectoryLockException(t)) {
+                plugin.getComponentLogger().error("Failed to start the minecraft server", t);
                 plugin.getServer().shutdown();
             } else {
-                plugin.getComponentLogger().error("An unexpected error occurred while loading the level {}",
-                        path.getFileName(), throwable);
-                plugin.getComponentLogger().error("Please report the error above on GitHub: {}",
-                        "https://github.com/TheNextLvl-net/worlds/issues/new/choose");
+                plugin.getComponentLogger().error("An unexpected error occurred while loading the level {}", key, t);
+                plugin.getComponentLogger().error("Please report the error above on GitHub: {}", WorldsPlugin.ISSUES);
             }
             return null;
         });
     }
 
-    @EventHandler(priority = EventPriority.LOWEST)
-    public void onWorldLoad(final WorldLoadEvent event) {
-        plugin.linkProvider().loadTree(event.getWorld())
-                .filter(LinkTree::isEmpty)
-                .filter(linkTree -> plugin.levelView().isOverworld(linkTree.getOverworld()))
-                .ifPresent(linkTree -> {
-                    plugin.levelView().getNether().ifPresent(linkTree::setNether);
-                    plugin.levelView().getEnd().ifPresent(linkTree::setEnd);
-                });
-    }
-
-    @EventHandler(priority = EventPriority.LOWEST)
-    public void onWorldLoad(final WorldUnloadEvent event) {
-        plugin.linkProvider().unloadTree(event.getWorld());
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR)
-    public void onWorldSave(final WorldSaveEvent event) {
-        plugin.linkProvider().persistTree(event.getWorld());
-    }
 }

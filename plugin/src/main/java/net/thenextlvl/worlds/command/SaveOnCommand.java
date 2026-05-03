@@ -3,6 +3,7 @@ package net.thenextlvl.worlds.command;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
+import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.thenextlvl.worlds.WorldsPlugin;
 import net.thenextlvl.worlds.command.brigadier.SimpleCommand;
 import org.bukkit.World;
@@ -26,12 +27,13 @@ public final class SaveOnCommand extends SimpleCommand {
 
     @Override
     public int run(final CommandContext<CommandSourceStack> context) {
-        final var world = tryGetArgument(context, "world", World.class)
-                .orElseGet(() -> context.getSource().getLocation().getWorld());
-        final var autoSave = world.isAutoSave();
-        final var message = autoSave ? "world.save.already-on" : "world.save.on";
-        if (!autoSave) world.setAutoSave(true);
-        plugin.bundle().sendMessage(context.getSource().getSender(), message);
-        return autoSave ? 0 : SINGLE_SUCCESS;
+        final var world = tryGetArgument(context, "world", World.class).orElse(null);
+        final var alreadyOn = SaveOffCommand.isAutoSave(plugin.getServer(), world, true);
+        final var message = SaveOffCommand.messageKey(world, alreadyOn ? "already-on" : "on");
+        if (!alreadyOn) SaveOffCommand.setAutoSave(plugin.getServer(), world, true);
+        if (world != null) plugin.bundle().sendMessage(context.getSource().getSender(), message,
+                Placeholder.parsed("world", world.key().asString()));
+        else plugin.bundle().sendMessage(context.getSource().getSender(), message);
+        return alreadyOn ? 0 : SINGLE_SUCCESS;
     }
 }

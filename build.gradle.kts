@@ -9,15 +9,16 @@ allprojects {
     version = rootProject.version
 
     apply { plugin("java") }
+    apply { plugin("java-library") }
 
     java.disableAutoTargetJvm()
 
     java {
-        toolchain.languageVersion = JavaLanguageVersion.of(21)
+        toolchain.languageVersion = JavaLanguageVersion.of(25)
     }
 
     tasks.compileJava {
-        options.release.set(21)
+        options.release.set(25)
     }
 
     repositories {

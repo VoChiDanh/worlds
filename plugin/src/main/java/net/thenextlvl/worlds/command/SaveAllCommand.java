@@ -5,6 +5,7 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
+import net.thenextlvl.worlds.WorldOperationException;
 import net.thenextlvl.worlds.WorldsPlugin;
 import net.thenextlvl.worlds.command.brigadier.BrigadierCommand;
 import org.jspecify.annotations.NullMarked;
@@ -36,12 +37,17 @@ public final class SaveAllCommand extends BrigadierCommand {
     private int saveAll(final CommandSourceStack source, final boolean flush) {
         plugin.bundle().sendMessage(source.getSender(), "world.save.all");
         CompletableFuture.allOf(plugin.getServer().getWorlds().stream().map(world -> {
-            return plugin.levelView().saveAsync(world, flush);
+            return plugin.save(world, flush).exceptionallyCompose(throwable -> {
+                final var failed = new WorldOperationException(
+                        WorldOperationException.Reason.SAVE_FAILED,
+                        throwable
+                ).key(world.key());
+                return CompletableFuture.failedFuture(failed);
+            });
         }).toArray(CompletableFuture[]::new)).thenAccept(ignored -> {
             plugin.bundle().sendMessage(source.getSender(), "world.save.all.success");
         }).exceptionally(throwable -> {
-            plugin.bundle().sendMessage(source.getSender(), "world.save.all.failed");
-            plugin.getComponentLogger().warn("Failed to save all worlds", throwable);
+            CommandFailureHandler.handle(plugin, source.getSender(), throwable);
             return null;
         });
         return Command.SINGLE_SUCCESS;

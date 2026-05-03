@@ -4,7 +4,6 @@ import com.mojang.brigadier.Command;
 import com.mojang.brigadier.builder.ArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
-import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
@@ -43,7 +42,7 @@ final class WorldUnloadCommand extends SimpleCommand {
     }
 
     @Override
-    public int run(final CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+    public int run(final CommandContext<CommandSourceStack> context) {
         final var world = context.getArgument("world", World.class);
         final var fallback = tryGetArgument(context, "fallback", World.class).orElse(null);
 
@@ -59,7 +58,7 @@ final class WorldUnloadCommand extends SimpleCommand {
                 : plugin.levelView().getOverworld().getSpawnLocation();
 
         plugin.bundle().sendMessage(context.getSource().getSender(), "world.unload",
-                Placeholder.parsed("world", world.getName()));
+                Placeholder.parsed("world", world.key().asString()));
 
         CompletableFuture.allOf(world.getPlayers().stream()
                 .map(player -> player.teleportAsync(fallbackSpawn, COMMAND).thenAccept(success -> {
@@ -67,12 +66,12 @@ final class WorldUnloadCommand extends SimpleCommand {
                 }))
                 .toArray(CompletableFuture[]::new)
         ).thenCompose(ignored -> {
-            plugin.levelView().setEnabled(world, false);
-            return plugin.levelView().unloadAsync(world, true);
+            plugin.getWorldRegistry().setEnabled(world.key(), false);
+            return plugin.unload(world, true);
         }).thenAccept(success -> {
             final var message = success ? "world.unload.success" : "world.unload.failed";
             plugin.bundle().sendMessage(context.getSource().getSender(), message,
-                    Placeholder.parsed("world", world.getName()));
+                    Placeholder.parsed("world", world.key().asString()));
         });
         return Command.SINGLE_SUCCESS;
     }

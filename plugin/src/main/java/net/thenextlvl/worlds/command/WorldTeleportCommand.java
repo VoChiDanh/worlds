@@ -58,11 +58,11 @@ final class WorldTeleportCommand extends SimpleCommand {
         final var location = position != null ? position.resolve(context.getSource()).toLocation(world) : world.getSpawnLocation();
 
         entities.forEach(entity -> {
-            if (entity instanceof final Player player && !player.hasPermission(plugin.levelView().getEntryPermission(world))) {
-                plugin.bundle().sendMessage(entity, "world.entry.denied", Placeholder.parsed("world", world.getName()));
+            if (entity instanceof final Player player && !player.hasPermission(plugin.getEntryPermission(world))) {
+                plugin.bundle().sendMessage(entity, "world.entry.denied", Placeholder.parsed("world", world.key().asString()));
             } else entity.teleportAsync(location, COMMAND).thenAccept(success -> {
                 final var message = success ? "world.teleport.self" : "world.teleport.failed";
-                plugin.bundle().sendMessage(entity, message, Placeholder.parsed("world", location.getWorld().getName()));
+                plugin.bundle().sendMessage(entity, message, Placeholder.parsed("world", location.getWorld().key().asString()));
             });
         });
 
@@ -77,7 +77,7 @@ final class WorldTeleportCommand extends SimpleCommand {
         final Runnable runnable = () -> plugin.bundle().sendMessage(sender, message,
                 Placeholder.component("entity", entity != null ? entity.name() : Component.empty()),
                 Placeholder.parsed("entities", String.valueOf(entities.size())),
-                Placeholder.parsed("world", location.getWorld().getName()));
+                Placeholder.parsed("world", location.getWorld().key().asString()));
 
         if (entity != null) entity.getScheduler().run(plugin, task -> runnable.run(), null);
         else runnable.run();

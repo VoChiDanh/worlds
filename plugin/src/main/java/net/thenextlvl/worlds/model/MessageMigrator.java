@@ -10,20 +10,6 @@ import java.util.Set;
 @NullMarked
 public final class MessageMigrator implements ResourceMigrator {
     private final Set<MigrationRule> rules = Set.of(
-            new MigrationRule(Locale.US, "world.list", "<worlds>", "<worlds:'<gray>, </gray>'>"),
-            new MigrationRule(Locale.GERMANY, "world.list", "<worlds>", "<worlds:'<gray>, </gray>'>"),
-
-            new MigrationRule(Locale.US, "world.link.list", "<links>", "<links:'<gray>,</gray><newline>'>"),
-            new MigrationRule(Locale.GERMANY, "world.link.list", "<links>", "<links:'<gray>,</gray><newline>'>"),
-
-            new MigrationRule(Locale.US, "world.info.type", " <dark_gray>(<green><old></green>)</dark_gray>", ""),
-            new MigrationRule(Locale.GERMANY, "world.info.type", " <dark_gray>(<green><old></green>)</dark_gray>", ""),
-
-            new MigrationRule(Locale.US, "world.spawn.set.success", "<angle>", "<yaw>, <pitch>"),
-            new MigrationRule(Locale.GERMANY, "world.spawn.set.success", "<angle>", "<yaw>, <pitch>"),
-
-            new MigrationRule(Locale.US, "world.name.taken", "<name>", "<world>"),
-            new MigrationRule(Locale.GERMANY, "world.name.taken", "<name>", "<world>")
     );
 
     @Override
