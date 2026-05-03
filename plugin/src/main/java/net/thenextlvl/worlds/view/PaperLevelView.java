@@ -191,31 +191,6 @@ public class PaperLevelView {
         return Key.key(namespace, findFreeValue(usedValues, value));
     }
 
-    // todo: can be removed?
-    public static String findFreeName(final Set<String> usedNames, final String name) {
-        if (!usedNames.contains(name)) return name;
-
-        var baseName = name;
-        int suffix = 1;
-        String candidate = baseName + " (1)";
-
-        final var pattern = Pattern.compile("^(.+) \\((\\d+)\\)$");
-        final var matcher = pattern.matcher(name);
-
-        if (matcher.matches()) {
-            baseName = matcher.group(1);
-            suffix = Integer.parseInt(matcher.group(2)) + 1;
-            candidate = baseName + " (" + suffix + ")";
-            suffix++;
-        }
-
-        while (usedNames.contains(candidate)) {
-            candidate = baseName + " (" + suffix++ + ")";
-        }
-
-        return candidate;
-    }
-
     public static String findFreeValue(final Set<String> usedValues, final String value) {
         if (!usedValues.contains(value)) return value;
 
@@ -223,7 +198,7 @@ public class PaperLevelView {
         int suffix = 1;
         String candidate = baseValue + "_1";
 
-        final var pattern = Pattern.compile("^(.+) \\((\\d+)\\)$");
+        final var pattern = Pattern.compile("^(.+)_(\\d+)$");
         final var matcher = pattern.matcher(value);
 
         if (matcher.matches()) {
