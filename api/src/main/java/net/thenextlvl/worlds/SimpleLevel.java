@@ -55,9 +55,8 @@ final class SimpleLevel implements Level {
 
         this.generator = builder.generator;
 
-        // todo: doublecheck if key.value is used as the name by bukkit now?
-        this.biomeProvider = builder.generator().flatMap(generator -> generator.biomeProvider(key.value())).orElse(null);
-        this.chunkGenerator = builder.generator().flatMap(generator -> generator.generator(key.value())).orElse(null);
+        this.biomeProvider = builder.generator().flatMap(generator -> generator.biomeProvider(getName())).orElse(null);
+        this.chunkGenerator = builder.generator().flatMap(generator -> generator.generator(getName())).orElse(null);
 
         this.generatorType = builder.generatorType().orElse(GeneratorType.NORMAL);
     }
