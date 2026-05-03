@@ -3,12 +3,15 @@ package net.thenextlvl.worlds.command.argument;
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import io.papermc.paper.command.brigadier.argument.ArgumentTypes;
 import net.kyori.adventure.key.Key;
+import net.kyori.adventure.text.Component;
 import net.thenextlvl.worlds.Dimension;
 import net.thenextlvl.worlds.WorldsPlugin;
+import net.thenextlvl.worlds.command.brigadier.ComponentCommandExceptionType;
 import org.jspecify.annotations.NullMarked;
 
 import java.util.concurrent.CompletableFuture;
@@ -23,8 +26,11 @@ public final class DimensionArgumentType implements SimpleArgumentType<Dimension
     }
 
     @Override
-    public Dimension convert(final StringReader reader, final Key type) {
-        return new Dimension(type);
+    public Dimension convert(final StringReader reader, final Key type) throws CommandSyntaxException {
+        if (this.isKnownDimension(type)) return new Dimension(type);
+        throw new ComponentCommandExceptionType(
+                Component.text("Unknown dimension: '" + type + "'")
+        ).createWithContext(reader);
     }
 
     @Override
@@ -39,5 +45,10 @@ public final class DimensionArgumentType implements SimpleArgumentType<Dimension
     @Override
     public ArgumentType<Key> getNativeType() {
         return ArgumentTypes.key();
+    }
+
+    private boolean isKnownDimension(final Key type) {
+        return Stream.concat(plugin.customDimensions(), Dimension.dimensions())
+                .anyMatch(dimension -> dimension.key().equals(type));
     }
 }
