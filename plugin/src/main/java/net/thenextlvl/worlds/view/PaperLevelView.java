@@ -2,10 +2,11 @@ package net.thenextlvl.worlds.view;
 
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.key.KeyPattern;
+import net.thenextlvl.nbt.NBTInputStream;
+import net.thenextlvl.nbt.NBTOutputStream;
 import net.thenextlvl.worlds.Level;
 import net.thenextlvl.worlds.WorldOperationException;
 import net.thenextlvl.worlds.WorldRegistry;
-import net.thenextlvl.worlds.WorldsAccess;
 import net.thenextlvl.worlds.WorldsPlugin;
 import net.thenextlvl.worlds.event.WorldCloneEvent;
 import org.bukkit.PortalType;
@@ -262,32 +263,65 @@ public class PaperLevelView {
                 .replace(" ", "_");
     }
 
-    public static void regenerate(final Path level) {
+    public void regenerate(final Path level, final long seed) {
         final var data = level.resolve("data");
-
         final var minecraft = data.resolve("minecraft");
         delete(minecraft.resolve("raids.dat"));
-        delete(minecraft.resolve("weather.dat"));
-        delete(minecraft.resolve("world_border.dat"));
-        delete(minecraft.resolve("world_clocks.dat"));
-        delete(minecraft.resolve("world_gen_settings.dat"));
-        final var paper = data.resolve("paper");
-        delete(paper.resolve("level_overrides.dat"));
-
+        replaceSeed(minecraft.resolve("world_gen_settings.dat"), seed);
         delete(level.resolve("entities"));
         delete(level.resolve("poi"));
         delete(level.resolve("region"));
     }
 
-    public static void delete(final Path path) {
+    public void delete(final Path level, final Key key) {
+        if (key.equals(OVERWORLD)) deleteOverworld(level);
+        else delete(level);
+    }
+
+    private void deleteOverworld(final Path level) {
+        final var data = level.resolve("data");
+        final var minecraft = data.resolve("minecraft");
+        final var paper = data.resolve("paper");
+
+        delete(level, Set.of(
+                minecraft.resolve("world_gen_settings.dat"),
+                paper.resolve("metadata.dat"),
+                paper.resolve("level_overrides.dat")
+        ));
+    }
+
+    public void delete(final Path path) {
+        delete(path, Set.of());
+    }
+
+    private void delete(final Path path, final Set<Path> skipped) {
         try {
+            if (skipped.contains(path)) return;
             if (!Files.isDirectory(path)) Files.deleteIfExists(path);
             else try (final var files = Files.list(path)) {
-                files.forEach(PaperLevelView::delete);
-                Files.deleteIfExists(path);
+                files.forEach(file -> delete(file, skipped));
+                try (final var remaining = Files.list(path)) {
+                    if (remaining.findAny().isEmpty()) Files.deleteIfExists(path);
+                }
             }
         } catch (final IOException e) {
-            WorldsAccess.access().getComponentLogger().warn("Failed to delete {}", path, e);
+            plugin.getComponentLogger().warn("Failed to delete {}", path, e);
+        }
+    }
+
+    private void replaceSeed(final Path path, final long seed) {
+        if (!Files.isRegularFile(path)) return;
+        try (final var input = NBTInputStream.create(path)) {
+            final var root = input.readTag();
+            final var data = root.getAsCompound("data").toBuilder()
+                    .put("seed", seed)
+                    .build();
+            final var updated = root.toBuilder().put("data", data).build();
+            try (final var output = NBTOutputStream.create(path)) {
+                output.writeTag(null, updated);
+            }
+        } catch (final IOException | RuntimeException e) {
+            plugin.getComponentLogger().warn("Failed to replace seed in {}", path, e);
         }
     }
 

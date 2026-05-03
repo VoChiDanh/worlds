@@ -214,7 +214,7 @@ public interface WorldsAccess extends Plugin {
      * @since 4.0.0
      */
     @Contract(pure = true)
-    ScheduledWorldOperations getScheduler();
+    OperationScheduler getScheduler();
 
     /**
      * Returns the backup provider.

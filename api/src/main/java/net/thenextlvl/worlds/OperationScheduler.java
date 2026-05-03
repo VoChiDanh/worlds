@@ -7,15 +7,16 @@ import org.bukkit.World;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Contract;
 
+import java.util.Optional;
 import java.util.stream.Stream;
 
 /**
- * Tracks and executes world operations that must be deferred.
+ * Keeps track of, and schedules, world operations that are performed on server startup.
  *
  * @since 4.0.0
  */
 @ApiStatus.NonExtendable
-public interface ScheduledWorldOperations {
+public interface OperationScheduler {
     /**
      * Returns all scheduled operations.
      *
@@ -24,28 +25,6 @@ public interface ScheduledWorldOperations {
      */
     @Contract(pure = true)
     Stream<Operation> operations();
-
-    /**
-     * Returns scheduled operations for a world key.
-     *
-     * @param world the world key
-     * @return a stream of scheduled operations
-     * @since 4.0.0
-     */
-    @Contract(pure = true)
-    Stream<Operation> operations(Key world);
-
-    /**
-     * Returns scheduled operations for a world.
-     *
-     * @param world the world
-     * @return a stream of scheduled operations
-     * @since 4.0.0
-     */
-    @Contract(pure = true)
-    default Stream<Operation> operations(final World world) {
-        return operations(world.key());
-    }
 
     /**
      * Returns scheduled operations of the specified action type.
@@ -58,39 +37,43 @@ public interface ScheduledWorldOperations {
     Stream<Operation> operations(WorldActionScheduledEvent.ActionType actionType);
 
     /**
-     * Schedules a world for deletion.
+     * Returns the scheduled operation for a world key.
      *
-     * @param world the world
-     * @return {@code true} if the operation was scheduled
+     * @param world the world key
+     * @return the scheduled operation
      * @since 4.0.0
      */
-    boolean scheduleDeletion(final World world);
+    @Contract(pure = true)
+    Optional<Operation> operation(Key world);
 
     /**
-     * Schedules a world for regeneration.
+     * Returns the scheduled operation for a world.
      *
      * @param world the world
-     * @return {@code true} if the operation was scheduled
+     * @return the scheduled operation
      * @since 4.0.0
      */
-    boolean scheduleRegeneration(final World world);
+    @Contract(pure = true)
+    default Optional<Operation> operation(final World world) {
+        return operation(world.key());
+    }
 
     /**
-     * Schedules a backup restoration for a world.
+     * Schedules an operation.
      *
-     * @param world  the world
-     * @param backup the backup to restore
-     * @return {@code true} if the operation was scheduled
+     * @param operation the operation to schedule
+     * @return {@code true} if the operation was scheduled, {@code false} otherwise
      * @since 4.0.0
      */
-    boolean scheduleBackupRestoration(final World world, final Backup backup);
+    @Contract(mutates = "this")
+    boolean schedule(Operation operation);
 
     /**
      * Checks whether an operation is scheduled for a world.
      *
      * @param world      the world
      * @param actionType the action type
-     * @return {@code true} if the operation is scheduled
+     * @return {@code true} if the operation is scheduled, {@code false} otherwise
      * @since 4.0.0
      */
     @Contract(pure = true)
@@ -103,7 +86,7 @@ public interface ScheduledWorldOperations {
      *
      * @param world      the world key
      * @param actionType the action type
-     * @return {@code true} if the operation is scheduled
+     * @return {@code true} if the operation is scheduled, {@code false} otherwise
      * @since 4.0.0
      */
     @Contract(pure = true)
@@ -114,7 +97,7 @@ public interface ScheduledWorldOperations {
      *
      * @param world      the world
      * @param actionType the action type
-     * @return {@code true} if an operation was cancelled
+     * @return {@code true} if an operation was canceled, {@code false} otherwise
      * @since 4.0.0
      */
     @Contract(mutates = "this")
@@ -127,7 +110,7 @@ public interface ScheduledWorldOperations {
      *
      * @param world      the world key
      * @param actionType the action type
-     * @return {@code true} if an operation was cancelled
+     * @return {@code true} if an operation was canceled, {@code false} otherwise
      * @since 4.0.0
      */
     @Contract(mutates = "this")
@@ -137,27 +120,18 @@ public interface ScheduledWorldOperations {
      * Cancels a scheduled operation.
      *
      * @param operation the operation
-     * @return {@code true} if the operation was cancelled
+     * @return {@code true} if the operation was canceled, {@code false} otherwise
      * @since 4.0.0
      */
     @Contract(mutates = "this")
     boolean cancel(Operation operation);
 
     /**
-     * Runs all scheduled operations.
-     *
-     * @since 4.0.0
-     */
-    @Contract(mutates = "this")
-    void runScheduledOperations();
-
-    /**
      * A scheduled world operation.
      *
      * @since 4.0.0
      */
-    @ApiStatus.NonExtendable
-    interface Operation extends Keyed, Runnable {
+    sealed interface Operation extends Keyed permits DeleteOperation, RegenerateOperation, BackupRestoreOperation {
         /**
          * Returns the scheduled action type.
          *
@@ -166,5 +140,46 @@ public interface ScheduledWorldOperations {
          */
         @Contract(pure = true)
         WorldActionScheduledEvent.ActionType type();
+    }
+
+    /**
+     * A scheduled world deletion operation.
+     *
+     * @param key the world key
+     * @since 4.0.0
+     */
+    record DeleteOperation(Key key) implements Operation {
+        @Override
+        public WorldActionScheduledEvent.ActionType type() {
+            return WorldActionScheduledEvent.ActionType.DELETE;
+        }
+    }
+
+    /**
+     * A scheduled world regeneration operation.
+     *
+     * @param key  the world key
+     * @param seed the seed to use when regenerating the world
+     * @since 4.0.0
+     */
+    record RegenerateOperation(Key key, long seed) implements Operation {
+        @Override
+        public WorldActionScheduledEvent.ActionType type() {
+            return WorldActionScheduledEvent.ActionType.REGENERATE;
+        }
+    }
+
+    /**
+     * A scheduled backup restoration operation.
+     *
+     * @param key    the world key
+     * @param backup the backup name
+     * @since 4.0.0
+     */
+    record BackupRestoreOperation(Key key, String backup) implements Operation {
+        @Override
+        public WorldActionScheduledEvent.ActionType type() {
+            return WorldActionScheduledEvent.ActionType.RESTORE_BACKUP;
+        }
     }
 }

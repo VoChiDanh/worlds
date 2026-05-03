@@ -1,45 +1,40 @@
 package net.thenextlvl.worlds.event;
 
+import net.thenextlvl.worlds.OperationScheduler;
 import org.bukkit.World;
 import org.bukkit.event.Cancellable;
+import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
-import org.bukkit.event.world.WorldEvent;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Contract;
 
 /**
- * Represents an event triggered when an action is scheduled to be performed on a {@link World}.
+ * Represents an event triggered when an action is scheduled to be performed on a world.
  * This event allows developers to listen to such actions and optionally cancel them.
- * <p>
- * This event provides details about the type of action being scheduled and allows cancellation.
- * <p>
- * The {@link ActionType} enum defines the possible actions that can be scheduled,
- * such as deleting a world or regenerating it.
  *
  * @since 4.0.0
  */
-public final class WorldActionScheduledEvent extends WorldEvent implements Cancellable {
+public final class WorldActionScheduledEvent extends Event implements Cancellable {
     private static final HandlerList handlerList = new HandlerList();
 
     private boolean cancelled = false;
-    private final ActionType
-            actionType;
+    private final OperationScheduler.Operation operation;
 
     @ApiStatus.Internal
-    public WorldActionScheduledEvent(final World world, final ActionType actionType) {
-        super(world, false);
-        this.actionType = actionType;
+    public WorldActionScheduledEvent(final OperationScheduler.Operation operation) {
+        super(false);
+        this.operation = operation;
     }
 
     /**
-     * Retrieves the type of action scheduled to be performed on a world.
+     * Retrieves the scheduled operation.
      *
-     * @return the scheduled action type
+     * @return the scheduled operation
      * @since 4.0.0
      */
     @Contract(pure = true)
-    public ActionType getActionType() {
-        return actionType;
+    public OperationScheduler.Operation getOperation() {
+        return operation;
     }
 
     @Override

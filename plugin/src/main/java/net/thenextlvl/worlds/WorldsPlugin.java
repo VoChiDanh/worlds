@@ -67,7 +67,7 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
             .<PaperLevelView>map(support -> new FoliaLevelView(this, support))
             .orElseGet(() -> new PaperLevelView(this));
     private final SimpleWorldRegistry worldRegistry = new SimpleWorldRegistry(this);
-    private final SimpleScheduledWorldOperations worldOperationScheduler = new SimpleScheduledWorldOperations(this);
+    private final SimpleOperationScheduler worldOperationScheduler = new SimpleOperationScheduler(this);
 
     private BackupProvider backupProvider = new SimpleBackupProvider();
 
@@ -114,14 +114,11 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
     }
 
     @Override
-    public void onDisable() {
-        getScheduler().runScheduledOperations();
-    }
-
-    @Override
     public void onEnable() {
         fastStats.ready();
         worldRegistry.read();
+        worldOperationScheduler.load();
+        worldOperationScheduler.runScheduledOperations();
         warnVoidGeneratorPlugin();
         registerListeners();
     }
@@ -362,7 +359,7 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
             if (!success) return CompletableFuture.failedFuture(new WorldOperationException(
                     WorldOperationException.Reason.UNLOAD_FAILED
             ).world(world.key().asString()));
-            PaperLevelView.delete(world.getWorldPath());
+            levelView.delete(world.getWorldPath());
             worldRegistry.unregister(world.key());
             getScheduler().cancel(world, WorldActionScheduledEvent.ActionType.DELETE);
             return CompletableFuture.completedFuture(true);
@@ -392,11 +389,13 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
                     WorldOperationException.Reason.UNLOAD_FAILED
             ).world(world.key().asString()));
 
-            PaperLevelView.regenerate(world.getWorldPath());
-            getScheduler().cancel(world, WorldActionScheduledEvent.ActionType.REGENERATE);
             final var builder = Level.copy(world).resetSpawnPosition(true);
             consumer.accept(builder);
             final var level = builder.build();
+
+            levelView.regenerate(world.getWorldPath(), level.getSeed());
+            getScheduler().cancel(world, WorldActionScheduledEvent.ActionType.REGENERATE);
+
             return level.create().thenApply(regenerated -> {
                 players.forEach(player -> player.teleportAsync(
                         regenerated.getSpawnLocation(), PlayerTeleportEvent.TeleportCause.PLUGIN
@@ -421,7 +420,7 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
     }
 
     @Override
-    public ScheduledWorldOperations getScheduler() {
+    public OperationScheduler getScheduler() {
         return worldOperationScheduler;
     }
 

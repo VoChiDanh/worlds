@@ -7,6 +7,7 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
+import net.thenextlvl.worlds.OperationScheduler;
 import net.thenextlvl.worlds.WorldOperationException;
 import net.thenextlvl.worlds.WorldsPlugin;
 import net.thenextlvl.worlds.command.argument.CommandFlagsArgument;
@@ -16,6 +17,7 @@ import org.jspecify.annotations.NullMarked;
 
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static net.thenextlvl.worlds.command.WorldCommand.worldArgument;
 
@@ -58,11 +60,13 @@ final class WorldRegenerateCommand extends SimpleCommand {
         if (!schedule) plugin.bundle().sendMessage(sender, "world.regenerate",
                 Placeholder.parsed("world", world.key().asString()));
 
+        final var regenerateSeed = flags.contains("--seed");
+        final var seed = regenerateSeed ? ThreadLocalRandom.current().nextLong() : world.getSeed();
         final var future = !schedule ? plugin.regenerate(world, builder -> {
-            if (flags.contains("--seed")) builder.seed(null);
-        }).thenApply(ignored -> true) : CompletableFuture.completedFuture(
-                plugin.getScheduler().scheduleRegeneration(world)
-        );
+            if (regenerateSeed) builder.seed(seed);
+        }).thenApply(ignored -> true) : CompletableFuture.completedFuture(plugin.getScheduler().schedule(
+                new OperationScheduler.RegenerateOperation(world.key(), seed)
+        ));
 
         future.thenAccept(success -> {
             if (success) {

@@ -6,6 +6,7 @@ import com.mojang.brigadier.context.CommandContext;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
+import net.thenextlvl.worlds.OperationScheduler;
 import net.thenextlvl.worlds.WorldOperationException;
 import net.thenextlvl.worlds.WorldsPlugin;
 import net.thenextlvl.worlds.command.argument.CommandFlagsArgument;
@@ -52,7 +53,9 @@ final class WorldDeleteCommand extends SimpleCommand {
         final var world = context.getArgument("world", World.class);
         final var schedule = flags.contains("--schedule");
         final var future = !schedule ? plugin.delete(world)
-                : CompletableFuture.completedFuture(plugin.getScheduler().scheduleDeletion(world));
+                : CompletableFuture.completedFuture(plugin.getScheduler().schedule(
+                new OperationScheduler.DeleteOperation(world.key())
+        ));
         if (!schedule) plugin.bundle().sendMessage(context.getSource().getSender(), "world.delete",
                 Placeholder.parsed("world", world.key().asString()));
         future.thenAccept(success -> {

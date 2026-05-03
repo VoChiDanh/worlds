@@ -7,6 +7,7 @@ import com.mojang.brigadier.context.CommandContext;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
+import net.thenextlvl.worlds.OperationScheduler;
 import net.thenextlvl.worlds.WorldOperationException;
 import net.thenextlvl.worlds.WorldsPlugin;
 import net.thenextlvl.worlds.command.CommandFailureHandler;
@@ -78,7 +79,9 @@ final class WorldBackupRestoreCommand extends SimpleCommand {
             }
 
             final var future = !schedule ? plugin.restoreBackup(world, backup).thenApply(ignored -> true)
-                    : CompletableFuture.completedFuture(plugin.getScheduler().scheduleBackupRestoration(world, backup));
+                    : CompletableFuture.completedFuture(plugin.getScheduler().schedule(
+                    new OperationScheduler.BackupRestoreOperation(world.key(), backup.name())
+            ));
             future.thenAccept(success -> {
                 if (success) {
                     final var message = schedule ? "world.backup.restore.scheduled" : "world.backup.restore.success";
@@ -88,7 +91,8 @@ final class WorldBackupRestoreCommand extends SimpleCommand {
                 } else CommandFailureHandler.handle(plugin, context.getSource().getSender(),
                         new WorldOperationException(WorldOperationException.Reason.EVENT_CANCELLED));
             }).exceptionally(throwable -> {
-                CommandFailureHandler.handle(plugin, context.getSource().getSender(), throwable, Placeholder.parsed("world", world.key().asString()),
+                CommandFailureHandler.handle(plugin, context.getSource().getSender(), throwable,
+                        Placeholder.parsed("world", world.key().asString()),
                         Placeholder.parsed("backup", backup.name()));
                 return null;
             });
