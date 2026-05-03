@@ -1,4 +1,4 @@
-package net.thenextlvl.worlds.command.argument;
+package net.thenextlvl.worlds.argument;
 
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.arguments.ArgumentType;
@@ -7,6 +7,7 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
+import net.thenextlvl.worlds.command.argument.CommandOptionsArgument;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
