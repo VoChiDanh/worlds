@@ -49,7 +49,7 @@ final class WorldDeleteCommand extends SimpleCommand {
     @Override
     public int run(final CommandContext<CommandSourceStack> context) {
         final var flags = context.getArgument("flags", CommandFlagsArgument.Flags.class);
-        if (!flags.contains("--confirm")) return confirmationNeeded(context);
+        if (!flags.contains("--confirm") && !flags.contains("--schedule")) return confirmationNeeded(context);
         final var world = context.getArgument("world", World.class);
         final var schedule = flags.contains("--schedule");
         final var future = !schedule ? plugin.delete(world)
