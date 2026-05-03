@@ -64,15 +64,6 @@ public interface WorldsAccess extends Plugin {
     Dimension getDimension(World world);
 
     /**
-     * Returns the root level directory.
-     *
-     * @return the root level directory
-     * @since 4.0.0
-     */
-    @Contract(pure = true)
-    Path getLevelDirectory();
-
-    /**
      * Lists known level directories.
      *
      * @return a stream of level paths

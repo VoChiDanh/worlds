@@ -239,11 +239,6 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
     }
 
     @Override
-    public Path getLevelDirectory() {
-        return getServer().getLevelDirectory();
-    }
-
-    @Override
     public Stream<Path> listLevels() {
         return levelView.listLevels();
     }
