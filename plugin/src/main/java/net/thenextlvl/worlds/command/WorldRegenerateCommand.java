@@ -3,7 +3,6 @@ package net.thenextlvl.worlds.command;
 import com.mojang.brigadier.builder.ArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
-import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
@@ -50,7 +49,7 @@ final class WorldRegenerateCommand extends SimpleCommand {
     }
 
     @Override
-    public int run(final CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+    public int run(final CommandContext<CommandSourceStack> context) {
         final var sender = context.getSource().getSender();
         final var options = context.getArgument("options", CommandOptionsArgument.Options.class);
         if (!options.contains("--confirm") && !options.contains("--schedule")) return confirmationNeeded(context);

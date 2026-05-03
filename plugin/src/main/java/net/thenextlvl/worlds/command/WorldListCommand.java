@@ -2,7 +2,6 @@ package net.thenextlvl.worlds.command;
 
 import com.mojang.brigadier.builder.ArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
-import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
@@ -39,7 +38,7 @@ final class WorldListCommand extends SimpleCommand {
     }
 
     @Override
-    public int run(final CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+    public int run(final CommandContext<CommandSourceStack> context) {
         final var sender = context.getSource().getSender();
         final var worlds = plugin.getServer().getWorlds();
 

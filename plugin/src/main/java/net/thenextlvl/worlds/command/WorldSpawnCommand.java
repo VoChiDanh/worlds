@@ -2,7 +2,6 @@ package net.thenextlvl.worlds.command;
 
 import com.mojang.brigadier.builder.ArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
-import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.thenextlvl.worlds.WorldsPlugin;
@@ -26,7 +25,7 @@ final class WorldSpawnCommand extends SimpleCommand {
     }
 
     @Override
-    public int run(final CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+    public int run(final CommandContext<CommandSourceStack> context) {
         final var player = (Player) context.getSource().getSender();
         player.teleportAsync(player.getWorld().getSpawnLocation(), COMMAND).thenAccept(success -> {
             final var message = success ? "world.teleport.self" : "world.teleport.failed";
