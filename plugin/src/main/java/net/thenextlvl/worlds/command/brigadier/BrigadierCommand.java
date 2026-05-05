@@ -6,6 +6,7 @@ import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
 import net.thenextlvl.worlds.WorldsPlugin;
 import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Optional;
 
@@ -13,10 +14,10 @@ import java.util.Optional;
 public abstract class BrigadierCommand {
     protected final WorldsPlugin plugin;
 
-    private final String permission;
+    private final @Nullable String permission;
     private final String name;
 
-    protected BrigadierCommand(final WorldsPlugin plugin, final String name, final String permission) {
+    protected BrigadierCommand(final WorldsPlugin plugin, final String name, @Nullable final String permission) {
         this.plugin = plugin;
         this.permission = permission;
         this.name = name;
@@ -27,7 +28,7 @@ public abstract class BrigadierCommand {
     }
 
     protected boolean canUse(final CommandSourceStack source) {
-        return source.getSender().hasPermission(permission);
+        return permission == null || source.getSender().hasPermission(permission);
     }
 
     protected <T> Optional<T> tryGetArgument(final CommandContext<CommandSourceStack> context, final String name, final Class<T> type) {
