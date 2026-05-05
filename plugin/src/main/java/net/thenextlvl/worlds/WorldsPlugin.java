@@ -429,9 +429,4 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
     public Path resolveLevelDirectory(final Key key) {
         return getDimensionsRoot().resolve(key.namespace()).resolve(key.value());
     }
-
-    @Override
-    public @Nullable ChunkGenerator getDefaultWorldGenerator(final String worldName, @Nullable final String id) {
-        return super.getDefaultWorldGenerator(worldName, id);
-    }
 }
