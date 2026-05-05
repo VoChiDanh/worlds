@@ -36,7 +36,7 @@ paper {
     apiVersion = "26.1"
     description = "Create, delete and manage your worlds"
     load = BukkitPluginDescription.PluginLoadOrder.STARTUP
-    website = "https://thenextlvl.net"
+    website = "https://thenextlvl.net/docs/worlds"
     authors = listOf("NonSwag")
     foliaSupported = true
 
