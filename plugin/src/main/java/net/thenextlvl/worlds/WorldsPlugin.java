@@ -33,7 +33,6 @@ import net.thenextlvl.worlds.view.PaperLevelView;
 import org.bstats.bukkit.Metrics;
 import org.bukkit.World;
 import org.bukkit.event.player.PlayerTeleportEvent;
-import org.bukkit.generator.ChunkGenerator;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jspecify.annotations.NullMarked;
