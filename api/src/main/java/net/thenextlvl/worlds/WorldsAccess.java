@@ -2,6 +2,7 @@ package net.thenextlvl.worlds;
 
 import net.kyori.adventure.key.Key;
 import net.thenextlvl.binder.StaticBinder;
+import org.bukkit.PortalType;
 import org.bukkit.World;
 import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.ApiStatus;
@@ -10,6 +11,7 @@ import org.jetbrains.annotations.Contract;
 import org.jspecify.annotations.Nullable;
 
 import java.nio.file.Path;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
@@ -224,6 +226,21 @@ public interface WorldsAccess extends Plugin {
      */
     @Contract(mutates = "this")
     void setBackupProvider(BackupProvider provider);
+
+    /**
+     * Returns the target world for a portal in the given world.
+     * <p>
+     * Nether portals resolve the related nether world from overworld, custom, and end worlds,
+     * or the related primary world from nether worlds. End portals resolve the related end world
+     * from overworld, custom, and nether worlds, or the related primary world from end worlds.
+     *
+     * @param world the source world
+     * @param type  the portal type
+     * @return the target world, or an empty optional if no target is available
+     * @since 4.0.0
+     */
+    @Contract(mutates = "this")
+    Optional<World> getPortalTarget(final World world, final PortalType type);
 
     /**
      * Returns the dimensions root directory.

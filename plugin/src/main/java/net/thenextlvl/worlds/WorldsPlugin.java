@@ -31,6 +31,7 @@ import net.thenextlvl.worlds.versions.v26_1_2.SimpleVersionHandler;
 import net.thenextlvl.worlds.view.FoliaLevelView;
 import net.thenextlvl.worlds.view.PaperLevelView;
 import org.bstats.bukkit.Metrics;
+import org.bukkit.PortalType;
 import org.bukkit.World;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.plugin.Plugin;
@@ -46,6 +47,7 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -417,6 +419,11 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
     @Override
     public void setBackupProvider(final BackupProvider provider) {
         this.backupProvider = provider;
+    }
+
+    @Override
+    public Optional<World> getPortalTarget(final World world, final PortalType type) {
+        return levelView.getTarget(world, type);
     }
 
     @Override

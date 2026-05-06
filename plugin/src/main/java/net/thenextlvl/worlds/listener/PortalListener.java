@@ -31,7 +31,7 @@ public class PortalListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onEntityPortal(final EntityPortalReadyEvent event) {
-        plugin.levelView().getTarget(event.getEntity().getWorld(), event.getPortalType())
+        plugin.getPortalTarget(event.getEntity().getWorld(), event.getPortalType())
                 .ifPresentOrElse(event::setTargetWorld, () -> event.setTargetWorld(null));
     }
 
@@ -48,10 +48,7 @@ public class PortalListener implements Listener {
 
         if (!cooldown.start(plugin, event.getEntity())) return;
 
-        final var readyEvent = new EntityPortalReadyEvent(event.getEntity(), null, PortalType.ENDER);
-        onEntityPortal(readyEvent);
-
-        final var targetWorld = readyEvent.getTargetWorld();
+        final var targetWorld = plugin.getPortalTarget(event.getEntity().getWorld(), event.getPortalType()).orElse(null);
         if (targetWorld == null) return;
 
         if (plugin.levelView().isOverworld(event.getEntity().getWorld()) && plugin.levelView().isEnd(targetWorld)) {
