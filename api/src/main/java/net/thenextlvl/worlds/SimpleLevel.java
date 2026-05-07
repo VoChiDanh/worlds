@@ -26,6 +26,8 @@ final class SimpleLevel implements Level {
     private final @Nullable ChunkGenerator chunkGenerator;
 
     private final @Nullable Generator generator;
+    private final @Nullable String legacyName;
+    private final boolean ignoreLevelData;
 
     private final @Nullable Position spawnPositionOverride;
     private final @Nullable Rotation spawnRotationOverride;
@@ -54,6 +56,8 @@ final class SimpleLevel implements Level {
         this.resetSpawnPosition = builder.resetSpawnPosition().orElse(false);
 
         this.generator = builder.generator;
+        this.ignoreLevelData = builder.ignoreLevelData().orElse(false);
+        this.legacyName = builder.legacyName().orElse(null);
 
         this.biomeProvider = builder.generator().flatMap(generator -> generator.biomeProvider(getName())).orElse(null);
         this.chunkGenerator = builder.generator().flatMap(generator -> generator.generator(getName())).orElse(null);
@@ -102,6 +106,16 @@ final class SimpleLevel implements Level {
     }
 
     @Override
+    public boolean ignoreLevelData() {
+        return ignoreLevelData;
+    }
+
+    @Override
+    public Optional<String> legacyName() {
+        return Optional.ofNullable(legacyName);
+    }
+
+    @Override
     public Optional<ChunkGenerator> getChunkGenerator() {
         return Optional.ofNullable(chunkGenerator);
     }
@@ -137,8 +151,10 @@ final class SimpleLevel implements Level {
                 .bonusChest(bonusChest)
                 .dimension(dimension)
                 .generator(generator)
+                .ignoreLevelData(ignoreLevelData)
                 .generatorType(generatorType)
                 .hardcore(hardcore)
+                .legacyName(legacyName)
                 .seed(seed)
                 .structures(structures);
     }
@@ -163,6 +179,7 @@ final class SimpleLevel implements Level {
     static final class Builder implements Level.Builder {
         private @Nullable Boolean bonusChest;
         private @Nullable Boolean hardcore;
+        private @Nullable Boolean ignoreLevelData;
         private @Nullable Boolean resetSpawnPosition;
         private @Nullable Boolean structures;
         private @Nullable Dimension dimension;
@@ -171,6 +188,7 @@ final class SimpleLevel implements Level {
         private @Nullable Long seed;
         private @Nullable Position spawnPositionOverride;
         private @Nullable Rotation spawnRotationOverride;
+        private @Nullable String legacyName;
         private Key key;
 
         public Builder(final Key key) {
@@ -292,6 +310,28 @@ final class SimpleLevel implements Level {
         @Override
         public Level.Builder generator(@Nullable final Generator generator) {
             this.generator = generator;
+            return this;
+        }
+
+        @Override
+        public Optional<Boolean> ignoreLevelData() {
+            return Optional.ofNullable(ignoreLevelData);
+        }
+
+        @Override
+        public Level.Builder ignoreLevelData(@Nullable final Boolean ignoreLevelData) {
+            this.ignoreLevelData = ignoreLevelData;
+            return this;
+        }
+
+        @Override
+        public Optional<String> legacyName() {
+            return Optional.ofNullable(legacyName);
+        }
+
+        @Override
+        public Level.Builder legacyName(@Nullable final String name) {
+            this.legacyName = name;
             return this;
         }
 

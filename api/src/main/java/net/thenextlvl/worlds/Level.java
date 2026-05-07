@@ -110,6 +110,28 @@ public sealed interface Level extends Keyed permits SimpleLevel {
     Optional<Generator> getGenerator();
 
     /**
+     * Returns whether existing level data should be ignored.
+     *
+     * @return {@code true} if level data should be ignored, otherwise {@code false}
+     * @since 4.0.1
+     */
+    @ApiStatus.Experimental
+    @Contract(pure = true)
+    boolean ignoreLevelData();
+
+    /**
+     * Returns the legacy Bukkit world name used during migration.
+     * <p>
+     * This value is only and exclusively used for legacy world migration. It must be the
+     * original legacy Bukkit name of the world directory, not a derived key or path.
+     *
+     * @return the legacy Bukkit world name, or empty
+     * @since 4.0.1
+     */
+    @Contract(pure = true)
+    Optional<String> legacyName();
+
+    /**
      * Returns the Bukkit chunk generator.
      *
      * @return the chunk generator, or empty
@@ -392,6 +414,49 @@ public sealed interface Level extends Keyed permits SimpleLevel {
          */
         @Contract(mutates = "this")
         Builder generator(@Nullable Generator generator);
+
+        /**
+         * Returns whether level data should be ignored.
+         *
+         * @return whether level data should be ignored
+         * @since 4.0.1
+         */
+        @ApiStatus.Experimental
+        @Contract(pure = true)
+        Optional<Boolean> ignoreLevelData();
+
+        /**
+         * Sets whether existing level data should be ignored.
+         *
+         * @param ignoreLevelData whether level data should be ignored, or {@code null} for {@code false}
+         * @return this builder
+         * @since 4.0.1
+         */
+        @ApiStatus.Experimental
+        @Contract(mutates = "this")
+        Builder ignoreLevelData(@Nullable Boolean ignoreLevelData);
+
+        /**
+         * Returns the legacy Bukkit world name used during migration.
+         *
+         * @return the legacy bukkit world name, or empty
+         * @since 4.0.1
+         */
+        @Contract(pure = true)
+        Optional<String> legacyName();
+
+        /**
+         * Sets the legacy Bukkit world name used during migration.
+         * <p>
+         * This is only and exclusively for legacy world migration. It must be the original
+         * legacy Bukkit name of the world directory, not a derived key or path.
+         *
+         * @param name the legacy Bukkit world name, or {@code null}
+         * @return this builder
+         * @since 4.0.1
+         */
+        @Contract(mutates = "this")
+        Builder legacyName(@Nullable String name);
 
         /**
          * Builds a level from the configured values.
