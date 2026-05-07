@@ -1,5 +1,7 @@
 package net.thenextlvl.worlds.command;
 
+import com.mojang.brigadier.arguments.ArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.ArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
@@ -14,16 +16,20 @@ import net.thenextlvl.worlds.command.argument.CommandOptionsArgument;
 import net.thenextlvl.worlds.command.argument.DimensionArgumentType;
 import net.thenextlvl.worlds.command.argument.GeneratorArgument;
 import net.thenextlvl.worlds.command.argument.KeyArgument;
-import net.thenextlvl.worlds.command.argument.WorldPresetArgument;
 import net.thenextlvl.worlds.command.brigadier.SimpleCommand;
-import net.thenextlvl.worlds.command.suggestion.WorldImportSuggestionProvider;
+import net.thenextlvl.worlds.command.suggestion.WorldKeyImportSuggestionProvider;
+import net.thenextlvl.worlds.command.suggestion.WorldPathImportSuggestionProvider;
+import net.thenextlvl.worlds.command.suggestion.WorldPathKeyImportSuggestionProvider;
 import net.thenextlvl.worlds.generator.Generator;
 import net.thenextlvl.worlds.generator.GeneratorType;
 import net.thenextlvl.worlds.preset.Preset;
 import org.bukkit.entity.Entity;
 import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
-import java.util.Map;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.HashMap;
 
 import static org.bukkit.event.player.PlayerTeleportEvent.TeleportCause.COMMAND;
 
@@ -36,17 +42,23 @@ final class WorldImportCommand extends SimpleCommand {
     public static ArgumentBuilder<CommandSourceStack, ?> create(final WorldsPlugin plugin) {
         final var command = new WorldImportCommand(plugin);
 
-        final var options = Commands.argument("options", new CommandOptionsArgument(Map.of(
-                "dimension", new DimensionArgumentType(plugin),
-                "generator", new GeneratorArgument(plugin),
-                "preset", new WorldPresetArgument(plugin)
-        ))).executes(command);
+        final var key = Commands.argument("key", new KeyArgument())
+                .suggests(new WorldKeyImportSuggestionProvider(plugin));
+        final var path = Commands.argument("path", StringArgumentType.string())
+                .suggests(new WorldPathImportSuggestionProvider(plugin));
+        final var pathKey = Commands.argument("key", new KeyArgument())
+                .suggests(new WorldPathKeyImportSuggestionProvider(plugin));
+        return command.create()
+                .then(key.then(command.options()).executes(command))
+                .then(path.then(pathKey.then(command.options()).executes(command)));
+    }
 
-        final var key = Commands.argument("key", new KeyArgument());
-        return command.create().then(key
-                .suggests(new WorldImportSuggestionProvider(plugin))
-                .then(options)
-                .executes(command));
+    private ArgumentBuilder<CommandSourceStack, ?> options() {
+        final var options = new HashMap<String, @Nullable ArgumentType<?>>();
+        options.put("dimension", new DimensionArgumentType(plugin));
+        options.put("generator", new GeneratorArgument(plugin));
+        options.put("--void-world", null);
+        return Commands.argument("options", new CommandOptionsArgument(options)).executes(this);
     }
 
     @Override
@@ -56,8 +68,6 @@ final class WorldImportCommand extends SimpleCommand {
 
         final var options = tryGetArgument(context, "options", CommandOptionsArgument.Options.class)
                 .orElseGet(CommandOptionsArgument.Options::new);
-        final var generatorType = options.getArgument("preset", Preset.class)
-                .map(GeneratorType.FLAT::with).orElse(null);
         final var dimension = options.getArgument("dimension", Dimension.class).orElse(null);
         final var generator = options.getArgument("generator", Generator.class).orElse(null);
 
@@ -69,13 +79,25 @@ final class WorldImportCommand extends SimpleCommand {
         }
 
         final var placeholder = Placeholder.parsed("world", key.asString());
-        plugin.bundle().sendMessage(sender, "world.import", placeholder);
 
-        final var build = Level.builder(key)
+        final var builder = Level.builder(key)
                 .generator(generator)
-                .generatorType(generatorType)
-                .dimension(dimension)
-                .build();
+                .dimension(dimension);
+        if (options.contains("--void-world")) builder
+                .generatorType(GeneratorType.FLAT.with(Preset.THE_VOID))
+                .ignoreLevelData(true);
+
+        final var source = tryGetArgument(context, "path", String.class)
+                .map(this::resolveSource);
+        if (source.isPresent()) try {
+            prepareSource(source.get(), builder);
+        } catch (final RuntimeException e) {
+            CommandFailureHandler.handle(plugin, sender, e, placeholder);
+            return 0;
+        }
+        final var build = builder.build();
+
+        plugin.bundle().sendMessage(sender, "world.import", placeholder);
 
         build.create().thenAccept(level -> {
             plugin.getWorldRegistry().register(build, true);
@@ -90,4 +112,49 @@ final class WorldImportCommand extends SimpleCommand {
 
         return SINGLE_SUCCESS;
     }
+
+    private Path resolveSource(final String input) {
+        final var path = Path.of(input);
+        if (path.isAbsolute() || path.getNameCount() != 1) throw new WorldOperationException(
+                WorldOperationException.Reason.WORLD_NOT_FOUND
+        ).path(path);
+        return plugin.getServer().getWorldContainer().toPath().resolve(path).normalize();
+    }
+
+    // todo: sorry future me but you have to clean up this mess :)
+    private void prepareSource(final Path source, final Level.Builder builder) {
+        if (!Files.isDirectory(source)) throw new WorldOperationException(
+                WorldOperationException.Reason.WORLD_NOT_FOUND
+        ).path(source);
+
+        final var level = builder.build();
+        final var target = level.getDirectory();
+        final var normalizedSource = source.toAbsolutePath().normalize();
+        if (normalizedSource.equals(plugin.getServer().getLevelDirectory().toAbsolutePath().normalize()))
+            throw new WorldOperationException(WorldOperationException.Reason.WORLD_DIRECTORY_LOADED).path(source);
+        if (plugin.getServer().getWorlds().stream()
+                .map(world -> world.getWorldPath().toAbsolutePath().normalize())
+                .anyMatch(normalizedSource::equals))
+            throw new WorldOperationException(WorldOperationException.Reason.WORLD_DIRECTORY_LOADED).path(source);
+        if (plugin.listLevels().map(path -> path.toAbsolutePath().normalize()).anyMatch(normalizedSource::equals))
+            throw new WorldOperationException(WorldOperationException.Reason.WORLD_PATH_EXISTS).path(source);
+        if (Files.exists(target) && !normalizedSource.equals(target.toAbsolutePath().normalize()))
+            throw new WorldOperationException(
+                    Files.isDirectory(target)
+                            ? WorldOperationException.Reason.WORLD_PATH_EXISTS
+                            : WorldOperationException.Reason.TARGET_PATH_IS_FILE
+            ).path(target);
+
+        if (!isLegacyWorld(source)) throw new WorldOperationException(
+                WorldOperationException.Reason.WORLD_NOT_FOUND
+        ).path(source);
+
+        builder.legacyName(source.getFileName().toString());
+    }
+
+    private boolean isLegacyWorld(final Path source) {
+        return Files.isRegularFile(source.resolve("level.dat"))
+                || Files.isRegularFile(source.resolve("level.dat_old"));
+    }
+
 }

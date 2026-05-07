@@ -103,10 +103,12 @@ public class PaperLevelView {
                 .generator(entry.generator());
     }
 
+    // todo: sorry future me but you have to clean up this duplicate code :)
     @SuppressWarnings("PatternValidation")
     public Optional<Key> key(final Path directory) {
-        final var dimensions = plugin.getDimensionsRoot();
-        final var relative = directory.startsWith(dimensions) ? dimensions.relativize(directory) : directory;
+        final var dimensions = plugin.getDimensionsRoot().toAbsolutePath().normalize();
+        final var absolute = directory.toAbsolutePath().normalize();
+        final var relative = absolute.startsWith(dimensions) ? dimensions.relativize(absolute) : directory;
 
         if (relative.getNameCount() != 2) return Optional.empty();
 
@@ -118,6 +120,23 @@ public class PaperLevelView {
 
         return Optional.of(Key.key(namespace, value));
     }
+
+    public Optional<Key> lenientKey(final Path directory) {
+        final var dimensions = plugin.getDimensionsRoot().toAbsolutePath().normalize();
+        final var absolute = directory.toAbsolutePath().normalize();
+        final var relative = absolute.startsWith(dimensions) ? dimensions.relativize(absolute) : directory;
+
+        if (relative.getNameCount() != 2) return Optional.empty();
+
+        final var namespace = createKey(relative.getName(0).toString());
+        if (namespace.isBlank() || !namespace.matches("[a-z0-9_\\-.]+")) return Optional.empty();
+
+        final var value = createKey(relative.getName(1).toString());
+        if (value.isBlank() || !value.matches("[a-z0-9_\\-./]+")) return Optional.empty();
+
+        return Optional.of(Key.key(namespace, value));
+    }
+    // todo: cleanup end
 
     public Stream<Path> listLevels() {
         return plugin.getWorldRegistry().worlds()

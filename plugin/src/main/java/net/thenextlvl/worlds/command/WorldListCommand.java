@@ -12,16 +12,20 @@ import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import net.thenextlvl.worlds.Dimension;
 import net.thenextlvl.worlds.WorldsPlugin;
 import net.thenextlvl.worlds.command.brigadier.SimpleCommand;
+import net.thenextlvl.worlds.view.PaperLevelView;
 import org.bukkit.World;
 import org.bukkit.command.CommandSender;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -43,15 +47,17 @@ final class WorldListCommand extends SimpleCommand {
         final var worlds = plugin.getServer().getWorlds();
 
         final var entries = new ArrayList<WorldListEntry>();
-        worlds.forEach(world -> entries.add(new WorldListEntry(world.key(), plugin.handler().getDimension(world), State.LOADED)));
+        worlds.forEach(world -> entries.add(new WorldListEntry(world.key(), plugin.handler().getDimension(world), State.LOADED, null)));
         plugin.getWorldRegistry().entrySet()
                 .filter(entry -> plugin.getServer().getWorld(entry.getKey()) == null)
-                .forEach(entry -> entries.add(new WorldListEntry(entry.getKey(), entry.getValue().dimension(), State.UNLOADED)));
+                .forEach(entry -> entries.add(new WorldListEntry(entry.getKey(), entry.getValue().dimension(), State.UNLOADED, null)));
 
-        listUnimported(worlds.stream().map(World::getWorldPath).toList(), plugin.listLevels().toList())
-                .map(path -> plugin.levelView().key(path).orElse(null))
+        listUnimported(
+                worlds.stream().map(World::getWorldPath).map(path -> path.toAbsolutePath().normalize()).toList(),
+                plugin.listLevels().map(path -> path.toAbsolutePath().normalize()).toList()
+        ).map(path -> unimportedEntry(path).orElse(null))
                 .filter(Objects::nonNull)
-                .forEach(key -> entries.add(new WorldListEntry(key, null, State.UNIMPORTED)));
+                .forEach(entries::add);
 
         plugin.bundle().sendMessage(sender, "world.list.header",
                 Placeholder.parsed("worlds", String.valueOf(count(entries, State.LOADED))),
@@ -59,7 +65,7 @@ final class WorldListCommand extends SimpleCommand {
                 Placeholder.parsed("unimported", String.valueOf(count(entries, State.UNIMPORTED))));
         entries.stream()
                 .sorted()
-                .collect(Collectors.groupingBy(entry -> entry.key().namespace(), TreeMap::new, Collectors.toList()))
+                .collect(Collectors.groupingBy(this::namespace, TreeMap::new, Collectors.toList()))
                 .forEach((key, value) -> {
                     plugin.bundle().sendMessage(sender, "world.list.namespace",
                             Placeholder.parsed("namespace", key),
@@ -72,11 +78,92 @@ final class WorldListCommand extends SimpleCommand {
         return SINGLE_SUCCESS;
     }
 
+    private String namespace(final WorldListEntry entry) {
+        if (!entry.state().equals(State.UNIMPORTED) || entry.importPath() == null || isModernLevelPath(entry.importPath())
+                || isLegacyWorld(entry.importPath()))
+            return entry.key().namespace();
+        final var root = plugin.getServer().getWorldContainer().toPath().toAbsolutePath().normalize();
+        final var parent = entry.importPath().toAbsolutePath().normalize().getParent();
+        if (parent == null || parent.equals(root)) return ".";
+        return root.relativize(parent).toString();
+    }
+
     private Stream<Path> listUnimported(final List<Path> loadedFolders, final List<Path> managedFolders) {
-        return plugin.levelView().listLevelFolders().stream()
+        return Stream.concat(plugin.levelView().listLevelFolders().stream(), listRootLevelFolders())
+                .map(path -> path.toAbsolutePath().normalize())
                 .filter(path -> !loadedFolders.contains(path))
                 .filter(path -> !managedFolders.contains(path));
     }
+
+    // todo: sorry future me but you have to clean up this mess :)
+    private Stream<Path> listRootLevelFolders() {
+        final var root = plugin.getServer().getWorldContainer().toPath();
+        final var serverLevel = plugin.getServer().getLevelDirectory().toAbsolutePath().normalize();
+        final var dimensions = plugin.getDimensionsRoot().toAbsolutePath().normalize();
+        try (final var paths = Files.walk(root)) {
+            return paths.filter(Files::isDirectory)
+                    .filter(path -> !path.equals(root))
+                    .filter(path -> {
+                        final var normalized = path.toAbsolutePath().normalize();
+                        return !normalized.equals(serverLevel) && !normalized.startsWith(dimensions);
+                    })
+                    .filter(this::looksLikeWorld)
+                    .toList().stream();
+        } catch (final IOException e) {
+            return Stream.empty();
+        }
+    }
+
+    private boolean looksLikeWorld(final Path path) {
+        return Files.isDirectory(path.resolve("region"))
+                || Files.isRegularFile(path.resolve("level.dat"))
+                || Files.isRegularFile(path.resolve("level.dat_old"));
+    }
+
+    private Optional<WorldListEntry> unimportedEntry(final Path path) {
+        if (isLegacyWorld(path)) return legacyEntry(path);
+        final var key = key(path).orElse(null);
+        if (key != null) return plugin.getWorldRegistry().isRegistered(key)
+                ? Optional.empty()
+                : Optional.of(new WorldListEntry(key, null, State.UNIMPORTED, isModernLevelPath(path) ? null : path));
+        return Optional.ofNullable(path.getFileName())
+                .map(Path::toString)
+                .map(PaperLevelView::createKey)
+                .filter(value -> !value.isBlank())
+                .map(value -> plugin.levelView().findFreeKey("worlds", value))
+                .map(fallback -> new WorldListEntry(fallback, null, State.UNIMPORTED, path));
+    }
+
+    private Optional<WorldListEntry> legacyEntry(final Path path) {
+        return plugin.legacyWorldRegistry().read(path)
+                .filter(data -> !plugin.getWorldRegistry().isRegistered(data.key()))
+                .map(data -> new WorldListEntry(data.key(), null, State.UNIMPORTED, path));
+    }
+
+    private Optional<Key> key(final Path path) {
+        final var root = plugin.getServer().getWorldContainer().toPath().toAbsolutePath().normalize();
+        final var absolute = path.toAbsolutePath().normalize();
+        final var relative = absolute.startsWith(root) ? root.relativize(absolute) : absolute;
+        return plugin.levelView().key(absolute)
+                .or(() -> plugin.levelView().lenientKey(absolute))
+                .or(() -> plugin.levelView().lenientKey(relative))
+                .or(() -> plugin.levelView().lenientKey(lastTwoSegments(absolute)));
+    }
+
+    private boolean isLegacyWorld(final Path path) {
+        return Files.isRegularFile(path.resolve("level.dat"))
+                || Files.isRegularFile(path.resolve("level.dat_old"));
+    }
+
+    private Path lastTwoSegments(final Path path) {
+        final var count = path.getNameCount();
+        return count > 2 ? path.subpath(count - 2, count) : path;
+    }
+
+    private boolean isModernLevelPath(final Path path) {
+        return path.toAbsolutePath().normalize().startsWith(plugin.getDimensionsRoot().toAbsolutePath().normalize());
+    }
+    // todo: cleanup end
 
     private long count(final Iterable<WorldListEntry> entries, final State state) {
         var count = 0;
@@ -111,7 +198,7 @@ final class WorldListCommand extends SimpleCommand {
     }
 
     private record WorldListEntry(Key key, @Nullable Dimension dimension,
-                                  State state) implements Comparable<WorldListEntry> {
+                                  State state, @Nullable Path importPath) implements Comparable<WorldListEntry> {
         private static final Comparator<WorldListEntry> COMPARATOR = Comparator
                 .comparing((WorldListEntry entry) -> entry.key.namespace())
                 .thenComparing(entry -> entry.state)
@@ -134,7 +221,24 @@ final class WorldListCommand extends SimpleCommand {
             return plugin.bundle().component(state.translationKey, sender, placeholders)
                     .hoverEvent(HoverEvent.showText(plugin.bundle().component(state.hoverKey, sender,
                             Placeholder.parsed("world", key))))
-                    .clickEvent(ClickEvent.suggestCommand(state.command + key + suffix));
+                    .clickEvent(ClickEvent.suggestCommand(command(plugin) + suffix));
+        }
+
+        private String command(final WorldsPlugin plugin) {
+            if (!state.equals(State.UNIMPORTED) || importPath == null) return state.command + key().asString();
+            final var root = plugin.getServer().getWorldContainer().toPath().toAbsolutePath().normalize();
+            final var path = root.relativize(importPath.toAbsolutePath().normalize()).toString();
+            final var command = new StringBuilder(state.command)
+                    .append("\"")
+                    .append(path.replace("\\", "\\\\").replace("\"", "\\\""))
+                    .append("\" ")
+                    .append(key().asString());
+            plugin.legacyWorldRegistry().read(importPath).ifPresent(data -> {
+                command.append(" dimension ").append(data.dimension().key().asString());
+                final var generator = data.generator();
+                if (generator != null) command.append(" generator ").append(generator);
+            });
+            return command.toString();
         }
 
         private Component label() {
