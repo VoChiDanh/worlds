@@ -51,11 +51,11 @@ final class SimpleGenerator implements Generator {
         final var generator = WorldsAccess.access().getServer().getPluginManager().getPlugin(plugin);
 
         if (generator == null)
-            throw new GeneratorException(plugin, id, "Plugin not found");
+            throw new GeneratorException(plugin, id, "Plugin \"" + plugin + "\" not found");
         if (!generator.isEnabled())
-            throw new GeneratorException(plugin, id, "Plugin is not enabled, is it 'load: STARTUP'?");
+            throw new GeneratorException(plugin, id, "Plugin \"" + plugin + "\" is not enabled, is it 'load: STARTUP'?");
         if (!GeneratorView.view().hasGenerator(generator))
-            throw new GeneratorException(plugin, id, "Plugin has no generator");
+            throw new GeneratorException(plugin, id, "Plugin \"" + plugin + "\" has no generator");
 
         return new SimpleGenerator(generator, id);
     }
