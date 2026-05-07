@@ -93,10 +93,11 @@ public interface WorldRegistry {
      * @param dimension the world dimension
      * @param enabled   whether the world is enabled
      * @param generator the world generator, or {@code null}
+     * @return whether the world has been registered
      * @since 4.0.0
      */
     @Contract(mutates = "this,io")
-    void registerIfAbsent(final Key key, final Dimension dimension, final boolean enabled, @Nullable final Generator generator);
+    boolean registerIfAbsent(final Key key, final Dimension dimension, final boolean enabled, @Nullable final Generator generator);
 
     /**
      * Registers a level.
