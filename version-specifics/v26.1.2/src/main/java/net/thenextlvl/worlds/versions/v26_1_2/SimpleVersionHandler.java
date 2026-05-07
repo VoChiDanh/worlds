@@ -485,6 +485,11 @@ public final class SimpleVersionHandler extends VersionHandler {
         return new Dimension(fromIdentifier(identifier));
     }
 
+    @Override
+    public void warnAndDelayStartupMigration() {
+        WorldFolderMigration.warnAndDelayStartupMigration();
+    }
+
     @SuppressWarnings("PatternValidation")
     private Key fromIdentifier(final Identifier identifier) {
         return Key.key(identifier.getNamespace(), identifier.getPath());

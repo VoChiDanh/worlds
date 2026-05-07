@@ -60,6 +60,8 @@ public abstract class VersionHandler {
 
     public abstract Dimension getDimension(World world);
 
+    public abstract void warnAndDelayStartupMigration();
+
     public Optional<FoliaSupport> foliaSupport() {
         return Optional.ofNullable(foliaSupport);
     }
