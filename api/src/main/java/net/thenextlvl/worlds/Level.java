@@ -113,7 +113,7 @@ public sealed interface Level extends Keyed permits SimpleLevel {
      * Returns whether existing level data should be ignored.
      *
      * @return {@code true} if level data should be ignored, otherwise {@code false}
-     * @since 4.0.1
+     * @since 4.1.0
      */
     @ApiStatus.Experimental
     @Contract(pure = true)
@@ -126,7 +126,7 @@ public sealed interface Level extends Keyed permits SimpleLevel {
      * original legacy Bukkit name of the world directory, not a derived key or path.
      *
      * @return the legacy Bukkit world name, or empty
-     * @since 4.0.1
+     * @since 4.1.0
      */
     @Contract(pure = true)
     Optional<String> legacyName();
@@ -419,7 +419,7 @@ public sealed interface Level extends Keyed permits SimpleLevel {
          * Returns whether level data should be ignored.
          *
          * @return whether level data should be ignored
-         * @since 4.0.1
+         * @since 4.1.0
          */
         @ApiStatus.Experimental
         @Contract(pure = true)
@@ -430,7 +430,7 @@ public sealed interface Level extends Keyed permits SimpleLevel {
          *
          * @param ignoreLevelData whether level data should be ignored, or {@code null} for {@code false}
          * @return this builder
-         * @since 4.0.1
+         * @since 4.1.0
          */
         @ApiStatus.Experimental
         @Contract(mutates = "this")
@@ -440,7 +440,7 @@ public sealed interface Level extends Keyed permits SimpleLevel {
          * Returns the legacy Bukkit world name used during migration.
          *
          * @return the legacy bukkit world name, or empty
-         * @since 4.0.1
+         * @since 4.1.0
          */
         @Contract(pure = true)
         Optional<String> legacyName();
@@ -453,7 +453,7 @@ public sealed interface Level extends Keyed permits SimpleLevel {
          *
          * @param name the legacy Bukkit world name, or {@code null}
          * @return this builder
-         * @since 4.0.1
+         * @since 4.1.0
          */
         @Contract(mutates = "this")
         Builder legacyName(@Nullable String name);
