@@ -68,6 +68,7 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
     private final PaperLevelView levelView = versionHandler.foliaSupport()
             .<PaperLevelView>map(support -> new FoliaLevelView(this, support))
             .orElseGet(() -> new PaperLevelView(this));
+    private final LegacyWorldRegistry legacyWorldRegistry = new LegacyWorldRegistry(this);
     private final SimpleWorldRegistry worldRegistry = new SimpleWorldRegistry(this);
     private final SimpleOperationScheduler worldOperationScheduler = new SimpleOperationScheduler(this);
 
@@ -156,6 +157,10 @@ public final class WorldsPlugin extends JavaPlugin implements PluginAccess, Worl
 
     public PaperLevelView levelView() {
         return levelView;
+    }
+
+    public LegacyWorldRegistry legacyWorldRegistry() {
+        return legacyWorldRegistry;
     }
 
     private void createPresetsFolder() {

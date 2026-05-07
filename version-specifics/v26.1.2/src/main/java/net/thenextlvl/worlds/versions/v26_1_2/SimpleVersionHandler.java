@@ -87,7 +87,7 @@ import java.util.stream.Stream;
 
 public final class SimpleVersionHandler extends VersionHandler {
     public SimpleVersionHandler(final PluginAccess plugin) {
-        super(plugin, new SimpleFoliaSupport(plugin), true);
+        super(plugin, plugin.isRunningFolia() ? new SimpleFoliaSupport(plugin) : null, true);
     }
 
     @Override
@@ -118,7 +118,6 @@ public final class SimpleVersionHandler extends VersionHandler {
      * @see ServerLevel#saveLevelData(boolean)
      */
     @Override
-    @SuppressWarnings("JavadocReference")
     public CompletableFuture<@Nullable Void> saveLevelDataAsync(final World world) {
         final var level = ((CraftWorld) world).getHandle();
         final SavedDataStorage savedDataStorage = level.getChunkSource().getDataStorage();
@@ -227,11 +226,13 @@ public final class SimpleVersionHandler extends VersionHandler {
                     WorldOperationException.Reason.MISSING_LEVEL_STEM
             )); // Worlds - complete exceptionally
         }
-        try {
+        // Worlds - legacy world migration
+        final var legacyName = level.legacyName().orElse(null);
+        if (legacyName != null) try {
             WorldFolderMigration.migrateApiWorld(
                     console.storageSource,
                     console.registryAccess(),
-                    name,
+                    legacyName,
                     actualDimension,
                     dimensionKey
             );
@@ -239,15 +240,22 @@ public final class SimpleVersionHandler extends VersionHandler {
             return CompletableFuture.failedFuture(new WorldOperationException(
                     WorldOperationException.Reason.LEGACY_MIGRATION_FAILED,
                     ex
-            )); // Worlds - complete exceptionally
+            ));
         }
+        // Worlds end
         PaperWorldLoader.LoadedWorldData loadedWorldData = PaperWorldLoader.loadWorldData(
                 console,
                 dimensionKey,
                 name
         );
+
+        // Worlds - remove legacy pdc keys
+        if (legacyName != null && loadedWorldData.pdc() != null) removeLegacyPdcKeys(loadedWorldData.pdc());
+        // Worlds end
+
         final PrimaryLevelData primaryLevelData = (PrimaryLevelData) console.getWorldData();
-        WorldGenSettings worldGenSettings = LevelStorageSource.readExistingSavedData(console.storageSource, dimensionKey, console.registryAccess(), WorldGenSettings.TYPE)
+        WorldGenSettings worldGenSettings = level.ignoreLevelData() ? null // Worlds - ignore level data
+                : LevelStorageSource.readExistingSavedData(console.storageSource, dimensionKey, console.registryAccess(), WorldGenSettings.TYPE)
                 .result()
                 .orElse(null);
 
@@ -378,6 +386,17 @@ public final class SimpleVersionHandler extends VersionHandler {
         return CompletableFuture.completedFuture(serverLevel.getWorld());
     }
 
+    private void removeLegacyPdcKeys(final PaperWorldPDC pdc) {
+        final var data = pdc.persistentData();
+        data.remove(new NamespacedKey("worlds", "link_nether"));
+        data.remove(new NamespacedKey("worlds", "link_end"));
+        data.remove(new NamespacedKey("worlds", "enabled"));
+        data.remove(new NamespacedKey("worlds", "world_key"));
+        data.remove(new NamespacedKey("worlds", "generator"));
+        data.remove(new NamespacedKey("worlds", "dimension"));
+        pdc.setDirty();
+    }
+
     private Key getGeneratorTypeName(final GeneratorType generatorType) {
         if (generatorType.is(GeneratorType.DEBUG)) return Key.key("debug_all_block_states");
         if (generatorType.is(GeneratorType.SINGLE_BIOME)) return Key.key("single_biome_surface");
@@ -483,6 +502,11 @@ public final class SimpleVersionHandler extends VersionHandler {
         final var handle = ((CraftWorld) world).getHandle();
         final var identifier = handle.getTypeKey().identifier();
         return new Dimension(fromIdentifier(identifier));
+    }
+
+    @Override
+    public void warnAndDelayStartupMigration() {
+        WorldFolderMigration.warnAndDelayStartupMigration();
     }
 
     @SuppressWarnings("PatternValidation")

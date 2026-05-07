@@ -15,10 +15,10 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 @NullMarked
-public final class WorldImportSuggestionProvider implements SuggestionProvider<CommandSourceStack> {
+public final class WorldKeyImportSuggestionProvider implements SuggestionProvider<CommandSourceStack> {
     private final WorldsPlugin plugin;
 
-    public WorldImportSuggestionProvider(final WorldsPlugin plugin) {
+    public WorldKeyImportSuggestionProvider(final WorldsPlugin plugin) {
         this.plugin = plugin;
     }
 

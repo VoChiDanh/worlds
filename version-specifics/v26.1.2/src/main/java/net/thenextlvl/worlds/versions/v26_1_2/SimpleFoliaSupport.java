@@ -1,6 +1,9 @@
 package net.thenextlvl.worlds.versions.v26_1_2;
 
 import ca.spottedleaf.moonrise.patches.chunk_system.io.MoonriseRegionFileIO;
+import io.papermc.paper.FeatureHooks;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.Level;
 import net.thenextlvl.worlds.versions.FoliaSupport;
 import net.thenextlvl.worlds.versions.PluginAccess;
 import org.bukkit.World;
@@ -42,7 +45,7 @@ public class SimpleFoliaSupport extends FoliaSupport {
         return flush ? saved.thenCompose(ignored -> flushAsync(level)) : saved;
     }
 
-    private CompletableFuture<@Nullable Void> flushAsync(final net.minecraft.server.level.ServerLevel level) {
+    private CompletableFuture<@Nullable Void> flushAsync(final ServerLevel level) {
         final var future = new CompletableFuture<@Nullable Void>();
         plugin.getServer().getAsyncScheduler().runNow(plugin, task -> {
             try {
@@ -62,7 +65,7 @@ public class SimpleFoliaSupport extends FoliaSupport {
         final var server = ((CraftServer) plugin.getServer());
 
         if (server.getServer().getLevel(handle.dimension()) == null) return false;
-        if (handle.dimension() == net.minecraft.world.level.Level.OVERWORLD) return false;
+        if (handle.dimension() == Level.OVERWORLD) return false;
         return handle.players().isEmpty();
     }
 
@@ -75,7 +78,7 @@ public class SimpleFoliaSupport extends FoliaSupport {
             final var handle = ((CraftWorld) world).getHandle();
             markNonSchedulable(handle);
             handle.getChunkSource().close(false);
-            io.papermc.paper.FeatureHooks.closeEntityManager(handle, save);
+            FeatureHooks.closeEntityManager(handle, save);
         } catch (final Exception e) {
             throw new RuntimeException("Failed to close world", e);
         }
@@ -89,7 +92,7 @@ public class SimpleFoliaSupport extends FoliaSupport {
         markNonSchedulable(handle);
     }
 
-    private void markNonSchedulable(final net.minecraft.server.level.ServerLevel handle) {
+    private void markNonSchedulable(final ServerLevel handle) {
         handle.regioniser.computeForAllRegionsUnsynchronised(regionThread -> {
             if (regionThread.getData().world != handle) return;
             regionThread.getData().getRegionSchedulingHandle().markNonSchedulable();
