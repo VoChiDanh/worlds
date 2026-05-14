@@ -34,7 +34,7 @@ public sealed interface Level extends Keyed permits SimpleLevel {
 
     @ApiStatus.Obsolete
     default String getName() {
-        return key().asString();
+        return key().asString().replace(':', '_').replace('/', '_');
     }
 
     /**
