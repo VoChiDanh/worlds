@@ -249,6 +249,8 @@ public final class SimpleVersionHandler extends VersionHandler {
                 name
         );
         if (!loadedWorldData.bukkitName().equals(name)) {
+            // Keep the runtime Bukkit name independent from the legacy migration source.
+            // Plugins such as WorldGuard use World#getName() as a filesystem key.
             loadedWorldData = new PaperWorldLoader.LoadedWorldData(
                     name,
                     loadedWorldData.uuid(),
