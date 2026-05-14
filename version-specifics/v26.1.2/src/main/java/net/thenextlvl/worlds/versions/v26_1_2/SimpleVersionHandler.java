@@ -248,6 +248,14 @@ public final class SimpleVersionHandler extends VersionHandler {
                 dimensionKey,
                 name
         );
+        if (!loadedWorldData.bukkitName().equals(name)) {
+            loadedWorldData = new PaperWorldLoader.LoadedWorldData(
+                    name,
+                    loadedWorldData.uuid(),
+                    loadedWorldData.pdc(),
+                    loadedWorldData.levelOverrides()
+            );
+        }
 
         // Worlds - remove legacy pdc keys
         if (legacyName != null && loadedWorldData.pdc() != null) removeLegacyPdcKeys(loadedWorldData.pdc());
